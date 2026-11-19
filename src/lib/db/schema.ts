@@ -105,6 +105,32 @@ export const publishedContent = pgTable("published_content", {
   typeCreatedIdx: index("published_content_type_created_idx").on(table.type, table.createdAt.desc()),
 }));
 
+
+export const communityPosts = pgTable("community_posts", {
+  id: text("id").primaryKey(),
+  authorId: text("author_id").notNull(),
+  body: text("body").notNull(),
+  mediaUrl: text("media_url").notNull(),
+  mediaType: text("media_type").notNull(),
+  visibility: text("visibility").notNull(),
+  status: text("status").notNull(),
+  createdAt: timestamptz("created_at").notNull(),
+  updatedAt: timestamptz("updated_at").notNull(),
+}, (table) => ({
+  statusCreatedIdx: index("community_posts_status_created_idx").on(table.status, table.createdAt.desc()),
+  authorCreatedIdx: index("community_posts_author_created_idx").on(table.authorId, table.createdAt.desc()),
+}));
+
+export const communityComments = pgTable("community_comments", {
+  id: text("id").primaryKey(),
+  postId: text("post_id").notNull(),
+  authorId: text("author_id").notNull(),
+  body: text("body").notNull(),
+  createdAt: timestamptz("created_at").notNull(),
+}, (table) => ({
+  postCreatedIdx: index("community_comments_post_created_idx").on(table.postId, table.createdAt.asc()),
+}));
+
 export const communityFollows = pgTable("community_follows", {
   id: bigserial("id", { mode: "number" }).primaryKey(),
   followerId: text("follower_id").notNull(),
