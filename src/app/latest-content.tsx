@@ -16,14 +16,17 @@ type Publication = {
   createdAt: string;
 };
 
-function externalHttps(value: string): string | null {
-  try {
-    const url = new URL(value);
-    return url.protocol === "https:" ? url.toString() : null;
-  } catch {
-    return null;
-  }
-}
+const labels: Record<string, string> = {
+  article: "Artigo",
+  music: "Música",
+  video: "Vídeo",
+  announcement: "Comunicado",
+  poetry: "Poesia",
+  event: "Evento",
+  opportunity: "Oportunidade",
+  gallery: "Galeria",
+  podcast: "Podcast",
+};
 
 export default function LatestContent() {
   const [posts, setPosts] = useState<Publication[]>([]);
@@ -54,26 +57,33 @@ export default function LatestContent() {
         <p>Conteúdos publicados pela equipa<br />e pelos administradores do Código Lírico.</p>
       </div>
       <div className="latest-grid">
-        {posts.map((post) => {
-          const link = externalHttps(post.link);
-          const audio = externalHttps(post.audioUrl);
-          return (
-            <article className={post.featured ? "latest-card latest-card-featured" : "latest-card"} key={post.id}>
-              <div className="latest-card-top">
-                <span>{post.type.toUpperCase()}</span>
-                {post.featured && <span className="latest-featured">EM DESTAQUE</span>}
-              </div>
-              <div className="latest-card-content">
-                <span className="latest-category">{post.genre}</span>
-                <h3>{post.title}</h3>
-                <p className="latest-byline">Por {post.artist}</p>
-                <p className="latest-description">{post.description}</p>
-                {audio && <audio controls preload="none" src={audio}>O teu navegador não suporta áudio.</audio>}
-                {link && <a className="underlined-link" href={link} target="_blank" rel="noreferrer">Abrir publicação <span>↗</span></a>}
-              </div>
-            </article>
-          );
-        })}
+        {posts.map((post) => (
+          <article className={post.featured ? "latest-card latest-card-featured" : "latest-card"} key={post.id}>
+            <div className="latest-card-top">
+              <span>{labels[post.type] ?? post.type.toUpperCase()}</span>
+              {post.featured && <span className="latest-featured">EM DESTAQUE</span>}
+            </div>
+            {post.imageUrl && (
+              // External media links are validated as HTTPS by the server before storage.
+              <img className="latest-image" src={post.imageUrl} alt={post.title} loading="lazy" />
+            )}
+            <div className="latest-card-content">
+              <span className="latest-category">{post.genre}</span>
+              <h3>{post.title}</h3>
+              <p className="latest-byline">Por {post.artist}</p>
+              <p className="latest-description">{post.description}</p>
+              {post.type === "video" && post.audioUrl && (
+                <video className="latest-video" controls preload="none" playsInline src={post.audioUrl}>
+                  O teu navegador não suporta vídeo.
+                </video>
+              )}
+              {(post.type === "music" || post.type === "podcast") && post.audioUrl && (
+                <audio controls preload="none" src={post.audioUrl}>O teu navegador não suporta áudio.</audio>
+              )}
+              {post.link && <a className="underlined-link" href={post.link} target="_blank" rel="noreferrer">Abrir publicação <span>↗</span></a>}
+            </div>
+          </article>
+        ))}
       </div>
     </section>
   );
