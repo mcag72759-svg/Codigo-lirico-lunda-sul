@@ -20,10 +20,12 @@ export async function canReadCommunityPost(postId: string, viewerId?: string) {
     authorId: communityPosts.authorId,
     visibility: communityPosts.visibility,
     status: communityPosts.status,
+    scheduledAt: communityPosts.scheduledAt,
   }).from(communityPosts).where(eq(communityPosts.id, postId)).limit(1);
 
   if (!post || post.status !== "approved") return null;
   if (viewerId && post.authorId === viewerId) return post;
+  if (post.scheduledAt && post.scheduledAt.getTime() > Date.now()) return null;
   if (viewerId && await hasCommunityBlock(viewerId, post.authorId)) return null;
   if (post.visibility === "public") return post;
   if (!viewerId || post.visibility !== "followers") return null;
