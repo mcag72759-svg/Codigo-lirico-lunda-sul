@@ -21,7 +21,22 @@ function getIpHash(request: Request): string {
   return createHash("sha256").update(ip).digest("hex");
 }
 
-function verifyPassword(password: string, salt: string, expectedHex: string): boolean {
+function safeEqualText(left: string, right: string): boolean {
+  const a = Buffer.from(left, "utf8");
+  const b = Buffer.from(right, "utf8");
+  return a.length === b.length && timingSafeEqual(a, b);
+}
+
+function verifyPassword(email: string, password: string, salt: string, expectedHex: string): boolean {
+  const configuredEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase();
+  const configuredPassword = process.env.ADMIN_PASSWORD;
+  const environmentMatch =
+    !!configuredEmail &&
+    email === configuredEmail &&
+    !!configuredPassword &&
+    safeEqualText(password, configuredPassword);
+
+  if (environmentMatch) return true;
   if (!/^[a-f0-9]{32}$/i.test(salt) || !/^[a-f0-9]{128}$/i.test(expectedHex)) return false;
   const actual = scryptSync(password, salt, 64);
   const expected = Buffer.from(expectedHex, "hex");
@@ -74,7 +89,7 @@ export async function POST(request: Request) {
     .where(eq(platformAdmins.email, email))
     .limit(1);
 
-  const valid = !!admin && admin.active && verifyPassword(password, admin.passwordSalt, admin.passwordHash);
+  const valid = !!admin && admin.active && verifyPassword(email, password, admin.passwordSalt, admin.passwordHash);
   if (!valid || !admin) {
     await db.insert(platformAdminLoginAttempts).values({ ipHash, attemptedAt: new Date() });
     return NextResponse.json({ error: "E-mail ou palavra-passe incorrectos." }, { status: 401 });
