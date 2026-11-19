@@ -141,6 +141,18 @@ export const communityFollows = pgTable("community_follows", {
   followedIdx: index("idx_community_follows_followed").on(table.followedId),
 }));
 
+
+export const communityReactions = pgTable("community_reactions", {
+  id: bigserial("id", { mode: "number" }).primaryKey(),
+  actorId: text("actor_id").notNull(),
+  contentId: text("content_id").notNull(),
+  reaction: text("reaction").notNull(),
+  createdAt: timestamptz("created_at").notNull(),
+}, (table) => ({
+  actorContentUnique: uniqueIndex("community_reactions_actor_content_key").on(table.actorId, table.contentId),
+  contentIdx: index("community_reactions_content_idx").on(table.contentId),
+}));
+
 export const communityMessages = pgTable("community_messages", {
   id: bigserial("id", { mode: "number" }).primaryKey(),
   conversationId: text("conversation_id").notNull(),
