@@ -190,3 +190,20 @@ export const platformAdminLoginAttempts = pgTable("platform_admin_login_attempts
 }, (table) => ({
   ipTimeIdx: index("platform_admin_login_attempts_ip_time_idx").on(table.ipHash, table.attemptedAt.desc()),
 }));
+
+
+export const artistMedia = pgTable("artist_media", {
+  id: text("id").primaryKey(),
+  applicationId: text("application_id").notNull(),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  kind: text("kind").notNull(),
+  genre: text("genre").notNull(),
+  mediaUrl: text("media_url").notNull(),
+  mimeType: text("mime_type").notNull(),
+  sizeBytes: bigserial("size_bytes", { mode: "number" }).notNull(),
+  downloadAllowed: boolean("download_allowed").notNull(),
+  status: text("status").notNull(),
+  createdAt: timestamptz("created_at").notNull(),
+  reviewedAt: timestamptz("reviewed_at"),
+});
