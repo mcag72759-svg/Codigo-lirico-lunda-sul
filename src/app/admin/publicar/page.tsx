@@ -23,6 +23,7 @@ type Publication = {
 const types = [
   ["article", "Artigo / notícia"],
   ["music", "Música"],
+  ["podcast", "Podcast / episódio"],
   ["video", "Vídeo"],
   ["announcement", "Comunicado"],
   ["poetry", "Poesia / literatura"],
