@@ -23,6 +23,7 @@ type Publication = {
 const types = [
   ["article", "Artigo / notícia"],
   ["music", "Música"],
+  ["podcast", "Podcast / episódio"],
   ["video", "Vídeo"],
   ["announcement", "Comunicado"],
   ["poetry", "Poesia / literatura"],
@@ -153,7 +154,7 @@ export default function AdminPublishPage() {
   return (
     <main className="admin-publish-page">
       <Link className="admin-back-link" href="/">← Voltar ao Código Lírico</Link>
-      <div className="admin-publish-heading">
+      <div className="admin-publish-heading"><nav className="admin-module-links"><Link href="/admin/comunidade">Moderação da comunidade ↗</Link><Link href="/parcerias">Propostas de parceria ↗</Link><Link href="/podcasts">Ver podcasts ↗</Link><Link href="/downloads">Arquivo de downloads ↗</Link></nav>
         <span className="section-kicker">CENTRO DE ADMINISTRAÇÃO / CONTEÚDO</span>
         <h1>Gestão do <em>Código Lírico.</em></h1>
         <p>Publica e gere música, vídeos, artigos, comunicados, poesia, eventos, oportunidades e galerias.</p>

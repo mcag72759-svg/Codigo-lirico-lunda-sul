@@ -1,5 +1,6 @@
 import {
   bigserial,
+  bigint,
   boolean,
   date,
   index,
@@ -13,6 +14,33 @@ import {
 
 const timestamptz = (name: string) =>
   timestamp(name, { withTimezone: true, mode: "date" });
+
+
+export const artistApplications = pgTable("artist_applications", {
+  id: text("id").primaryKey(),
+  code: text("code").notNull(),
+  stageName: text("stage_name").notNull(),
+  fullName: text("full_name").notNull(),
+  municipality: text("municipality").notNull(),
+  genre: text("genre").notNull(),
+  email: text("email").notNull(),
+  phone: text("phone").notNull(),
+  bio: text("bio").notNull(),
+  link: text("link").notNull(),
+  photoUrl: text("photo_url").notNull(),
+  status: text("status").notNull(),
+  createdAt: timestamptz("created_at").notNull(),
+  reviewedAt: timestamptz("reviewed_at"),
+  requirements: text("requirements").notNull(),
+  deadline: timestamptz("deadline"),
+  decisionNote: text("decision_note").notNull(),
+  reviewedBy: text("reviewed_by"),
+  updatedAt: timestamptz("updated_at").notNull(),
+}, (table) => ({
+  codeUnique: uniqueIndex("artist_applications_code_key").on(table.code),
+  emailIdx: index("artist_applications_email_idx").on(table.email),
+  statusIdx: index("artist_applications_status_idx").on(table.status),
+}));
 
 export const artistAccounts = pgTable("artist_accounts", {
   id: text("id").primaryKey(),
@@ -77,6 +105,32 @@ export const publishedContent = pgTable("published_content", {
   typeCreatedIdx: index("published_content_type_created_idx").on(table.type, table.createdAt.desc()),
 }));
 
+
+export const communityPosts = pgTable("community_posts", {
+  id: text("id").primaryKey(),
+  authorId: text("author_id").notNull(),
+  body: text("body").notNull(),
+  mediaUrl: text("media_url").notNull(),
+  mediaType: text("media_type").notNull(),
+  visibility: text("visibility").notNull(),
+  status: text("status").notNull(),
+  createdAt: timestamptz("created_at").notNull(),
+  updatedAt: timestamptz("updated_at").notNull(),
+}, (table) => ({
+  statusCreatedIdx: index("community_posts_status_created_idx").on(table.status, table.createdAt.desc()),
+  authorCreatedIdx: index("community_posts_author_created_idx").on(table.authorId, table.createdAt.desc()),
+}));
+
+export const communityComments = pgTable("community_comments", {
+  id: text("id").primaryKey(),
+  postId: text("post_id").notNull(),
+  authorId: text("author_id").notNull(),
+  body: text("body").notNull(),
+  createdAt: timestamptz("created_at").notNull(),
+}, (table) => ({
+  postCreatedIdx: index("community_comments_post_created_idx").on(table.postId, table.createdAt.asc()),
+}));
+
 export const communityFollows = pgTable("community_follows", {
   id: bigserial("id", { mode: "number" }).primaryKey(),
   followerId: text("follower_id").notNull(),
@@ -85,6 +139,35 @@ export const communityFollows = pgTable("community_follows", {
 }, (table) => ({
   pairUnique: uniqueIndex("community_follows_follower_id_followed_id_key").on(table.followerId, table.followedId),
   followedIdx: index("idx_community_follows_followed").on(table.followedId),
+}));
+
+
+export const communityReactions = pgTable("community_reactions", {
+  id: bigserial("id", { mode: "number" }).primaryKey(),
+  actorId: text("actor_id").notNull(),
+  contentId: text("content_id").notNull(),
+  reaction: text("reaction").notNull(),
+  createdAt: timestamptz("created_at").notNull(),
+}, (table) => ({
+  actorContentUnique: uniqueIndex("community_reactions_actor_content_key").on(table.actorId, table.contentId),
+  contentIdx: index("community_reactions_content_idx").on(table.contentId),
+}));
+
+
+export const communityConversations = pgTable("community_conversations", {
+  id: text("id").primaryKey(),
+  createdBy: text("created_by").notNull(),
+  createdAt: timestamptz("created_at").notNull(),
+  lastMessageAt: timestamptz("last_message_at").notNull(),
+});
+
+export const communityConversationMembers = pgTable("community_conversation_members", {
+  conversationId: text("conversation_id").notNull(),
+  memberId: text("member_id").notNull(),
+  joinedAt: timestamptz("joined_at").notNull(),
+}, (table) => ({
+  memberConversationUnique: uniqueIndex("community_conversation_members_key").on(table.conversationId, table.memberId),
+  memberIdx: index("community_conversation_members_member_idx").on(table.memberId),
 }));
 
 export const communityMessages = pgTable("community_messages", {
@@ -134,6 +217,23 @@ export const culturalOpportunities = pgTable("cultural_opportunities", {
   createdAt: timestamptz("created_at").notNull(),
 }, (table) => ({
   statusDeadlineIdx: index("cultural_opportunities_status_deadline_idx").on(table.status, table.deadline),
+}));
+
+
+export const partnerRequests = pgTable("partner_requests", {
+  id: text("id").primaryKey(),
+  contactName: text("contact_name").notNull(),
+  organization: text("organization").notNull(),
+  email: text("email").notNull(),
+  phone: text("phone").notNull(),
+  proposal: text("proposal").notNull(),
+  status: text("status").notNull(),
+  createdAt: timestamptz("created_at").notNull(),
+  reviewedBy: text("reviewed_by"),
+  decisionNote: text("decision_note").notNull(),
+  updatedAt: timestamptz("updated_at").notNull(),
+}, (table) => ({
+  statusCreatedIdx: index("partner_requests_status_created_idx").on(table.status, table.createdAt.desc()),
 }));
 
 export const platformAuditLog = pgTable("platform_audit_log", {
@@ -190,3 +290,20 @@ export const platformAdminLoginAttempts = pgTable("platform_admin_login_attempts
 }, (table) => ({
   ipTimeIdx: index("platform_admin_login_attempts_ip_time_idx").on(table.ipHash, table.attemptedAt.desc()),
 }));
+
+
+export const artistMedia = pgTable("artist_media", {
+  id: text("id").primaryKey(),
+  applicationId: text("application_id").notNull(),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  kind: text("kind").notNull(),
+  genre: text("genre").notNull(),
+  mediaUrl: text("media_url").notNull(),
+  mimeType: text("mime_type").notNull(),
+  sizeBytes: bigint("size_bytes", { mode: "number" }).notNull(),
+  downloadAllowed: boolean("download_allowed").notNull(),
+  status: text("status").notNull(),
+  createdAt: timestamptz("created_at").notNull(),
+  reviewedAt: timestamptz("reviewed_at"),
+});
