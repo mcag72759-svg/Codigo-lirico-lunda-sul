@@ -22,7 +22,7 @@ export const artistAccounts = pgTable("artist_accounts", {
   createdAt: timestamptz("created_at").notNull(),
   updatedAt: timestamptz("updated_at").notNull(),
 }, (table) => ({
-  applicationUnique: uniqueIndex("artist_accounts_application_id_uidx").on(table.applicationId),
+  applicationUnique: uniqueIndex("artist_accounts_application_id_key").on(table.applicationId),
 }));
 
 export const artistSessions = pgTable("artist_sessions", {
@@ -32,8 +32,8 @@ export const artistSessions = pgTable("artist_sessions", {
   expiresAt: timestamptz("expires_at").notNull(),
   createdAt: timestamptz("created_at").notNull(),
 }, (table) => ({
-  tokenHashUnique: uniqueIndex("artist_sessions_token_hash_uidx").on(table.tokenHash),
-  accountIdx: index("artist_sessions_account_id_idx").on(table.accountId),
+  tokenHashUnique: uniqueIndex("artist_sessions_token_hash_key").on(table.tokenHash),
+  expiryIdx: index("artist_sessions_expiry_idx").on(table.expiresAt),
 }));
 
 export const platformAdmins = pgTable("platform_admins", {
@@ -49,7 +49,7 @@ export const platformAdmins = pgTable("platform_admins", {
   updatedAt: timestamptz("updated_at").notNull(),
   createdBy: text("created_by"),
 }, (table) => ({
-  emailUnique: uniqueIndex("platform_admins_email_uidx").on(table.email),
+  emailUnique: uniqueIndex("platform_admins_email_key").on(table.email),
 }));
 
 export const platformAdminSessions = pgTable("platform_admin_sessions", {
@@ -58,7 +58,7 @@ export const platformAdminSessions = pgTable("platform_admin_sessions", {
   expiresAt: timestamptz("expires_at").notNull(),
   createdAt: timestamptz("created_at").notNull(),
 }, (table) => ({
-  adminIdx: index("platform_admin_sessions_admin_id_idx").on(table.adminId),
+  expiryIdx: index("idx_platform_admin_sessions_expiry").on(table.expiresAt),
 }));
 
 export const publishedContent = pgTable("published_content", {
@@ -74,7 +74,7 @@ export const publishedContent = pgTable("published_content", {
   featured: boolean("featured").notNull(),
   createdAt: timestamptz("created_at").notNull(),
 }, (table) => ({
-  createdIdx: index("published_content_created_at_idx").on(table.createdAt),
+  typeCreatedIdx: index("published_content_type_created_idx").on(table.type, table.createdAt.desc()),
 }));
 
 export const communityFollows = pgTable("community_follows", {
@@ -83,8 +83,8 @@ export const communityFollows = pgTable("community_follows", {
   followedId: text("followed_id").notNull(),
   createdAt: timestamptz("created_at").notNull(),
 }, (table) => ({
-  pairUnique: uniqueIndex("community_follows_pair_uidx").on(table.followerId, table.followedId),
-  followedIdx: index("community_follows_followed_id_idx").on(table.followedId),
+  pairUnique: uniqueIndex("community_follows_follower_id_followed_id_key").on(table.followerId, table.followedId),
+  followedIdx: index("idx_community_follows_followed").on(table.followedId),
 }));
 
 export const communityMessages = pgTable("community_messages", {
@@ -95,7 +95,7 @@ export const communityMessages = pgTable("community_messages", {
   createdAt: timestamptz("created_at").notNull(),
   readAt: timestamptz("read_at"),
 }, (table) => ({
-  conversationCreatedIdx: index("community_messages_conversation_created_idx").on(table.conversationId, table.createdAt),
+  conversationCreatedIdx: index("idx_community_messages_conversation").on(table.conversationId, table.createdAt.desc()),
 }));
 
 export const communityEvents = pgTable("community_events", {
@@ -117,7 +117,7 @@ export const communityEvents = pgTable("community_events", {
   decisionNote: text("decision_note").notNull(),
   updatedAt: timestamptz("updated_at").notNull(),
 }, (table) => ({
-  statusStartIdx: index("community_events_status_starts_at_idx").on(table.status, table.startsAt),
+  statusDateIdx: index("community_events_status_date_idx").on(table.status, table.startsAt),
 }));
 
 export const culturalOpportunities = pgTable("cultural_opportunities", {
@@ -132,7 +132,9 @@ export const culturalOpportunities = pgTable("cultural_opportunities", {
   sourceUrl: text("source_url").notNull(),
   status: text("status").notNull(),
   createdAt: timestamptz("created_at").notNull(),
-});
+}, (table) => ({
+  statusDeadlineIdx: index("cultural_opportunities_status_deadline_idx").on(table.status, table.deadline),
+}));
 
 export const platformAuditLog = pgTable("platform_audit_log", {
   id: bigserial("id", { mode: "number" }).primaryKey(),
@@ -143,7 +145,7 @@ export const platformAuditLog = pgTable("platform_audit_log", {
   details: jsonb("details").notNull(),
   createdAt: timestamptz("created_at").notNull(),
 }, (table) => ({
-  createdIdx: index("platform_audit_log_created_at_idx").on(table.createdAt),
+  createdIdx: index("idx_platform_audit_created").on(table.createdAt.desc()),
 }));
 
 export const platformFinanceEntries = pgTable("platform_finance_entries", {
@@ -157,4 +159,6 @@ export const platformFinanceEntries = pgTable("platform_finance_entries", {
   occurredAt: date("occurred_at").notNull(),
   createdBy: text("created_by"),
   createdAt: timestamptz("created_at").notNull(),
-});
+}, (table) => ({
+  occurredDateIdx: index("idx_finance_entries_date").on(table.occurredAt.desc()),
+}));
