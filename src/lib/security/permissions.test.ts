@@ -16,6 +16,10 @@ describe("hasPermission", () => {
     expect(hasPermission(admin, "users.manage")).toBe(false);
   });
 
+  it("honors the existing super-admin wildcard permission", () => {
+    expect(hasPermission({ active: true, permissions: ["*"] }, "users.manage")).toBe(true);
+  });
+
   it("denies an empty permission request", () => {
     expect(hasPermission({ active: true, permissions: ["*"] }, " ")).toBe(false);
   });
