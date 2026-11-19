@@ -161,7 +161,7 @@ export default function HomePage() {
             </a>
           ))}
         </div>
-        <div className="footer-meta"><span>CRIADO POR MC AG EIGI</span><span>© {new Date().getFullYear()} · LUNDA SUL, ANGOLA</span></div>
+        <div className="footer-meta"><Link href="/admin/publicar">Centro de administração ↗</Link><Link href="/parcerias">Parcerias ↗</Link><span>CRIADO POR MC AG EIGI</span><span>© {new Date().getFullYear()} · LUNDA SUL, ANGOLA</span></div>
       </footer>
     </main>
   );
