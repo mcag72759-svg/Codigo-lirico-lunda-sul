@@ -18,7 +18,7 @@ export async function GET(){
    .then(rows=>rows.filter(row=>row.id!==artist.applicationId).slice(0,1));
   return conversation&&other?{...conversation,otherId:other.id,otherName:other.stageName}:null;
  }));
- return NextResponse.json({conversations:conversations.filter(Boolean).sort((a,b)=>b!.lastMessageAt.getTime()-a!.lastMessageAt.getTime()).slice(0,50)});
+ return NextResponse.json({conversations:conversations.filter(Boolean).slice(0,50)});
 }
 export async function POST(request:Request){
  const artist=await getArtistSession();if(!artist)return NextResponse.json({error:"Inicia sessão para enviar mensagens."},{status:401});
