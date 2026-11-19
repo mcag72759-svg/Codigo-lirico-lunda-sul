@@ -1,3 +1,5 @@
+// Pure permission rule. Call only on the server after loading the administrator
+// from a verified session; never accept an admin identity supplied by the browser.
 export type AdminIdentity = {
   active: boolean;
   permissions: string[];
@@ -11,5 +13,5 @@ export function hasPermission(
     return false;
   }
 
-  return admin.permissions.includes(requiredPermission);
+  return admin.permissions.includes("*") || admin.permissions.includes(requiredPermission);
 }
