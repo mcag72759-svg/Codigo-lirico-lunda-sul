@@ -11,7 +11,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const CONTENT_TYPES = new Set([
-  "article", "music", "video", "announcement", "poetry", "event", "opportunity", "gallery",
+  "article", "music", "podcast", "video", "announcement", "poetry", "event", "opportunity", "gallery",
 ]);
 
 function cleanText(value: unknown, maxLength: number): string {
