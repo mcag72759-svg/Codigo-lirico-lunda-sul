@@ -48,7 +48,16 @@ npm run build
 npm audit --audit-level=high
 ```
 
+## Funcionalidades da versão integrada
+- Candidatura pública de artistas, revisão administrativa e activação individual da conta.
+- Estúdio do artista com categorias para música, vídeo, poesia, eventos, organizações, parcerias, anúncios, artigos e galerias.
+- Upload de ficheiros de áudio/vídeo, reprodução nativa e downloads públicos quando autorizados.
+- Feed comunitário com seguir, gostos, comentários, mensagens privadas e moderação.
+- Métricas para artistas e administração: seguidores, gostos, comentários e visualizações únicas por publicação.
+- Eventos com data, local, organização, preço e ligação externa de bilhetes/inscrição.
+- Agendamento de publicações, respeitando a aprovação administrativa.
+
 ## Limites claros desta versão
-Esta entrega é uma plataforma cultural/editorial com administração, estúdio privado e uma comunidade reservada a artistas aprovados. Não existe registo público aberto nem mensagens privadas nesta versão. O feed, comentários, reacções, seguimento entre artistas, denúncias e moderação estão activos; novos posts ficam pendentes até revisão administrativa.
+A bilheteira encaminha para um serviço externo; não processa pagamentos no próprio Código Lírico. O agendamento não substitui a revisão administrativa: uma publicação só fica visível depois de aprovada e de chegar a hora definida.
 
 Os links das redes sociais do criador usam pesquisas públicas enquanto os URLs directos dos perfis não forem configurados. A lista de eventos e oportunidades depende de registos mantidos na base de dados; cada entidade externa deve ser confirmada na sua fonte antes de qualquer participação.
