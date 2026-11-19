@@ -11,7 +11,8 @@ type Publication = {
   externalUrl:string; mediaUrl:string; imageUrl:string; featured:boolean; status:string; createdAt:string;
   scheduledAt:string|null;eventStartsAt:string|null;location:string;organizer:string;ticketPrice:string;ticketUrl:string;
 };
-type PlatformAnalytics={artists:number;publications:number;pending:number;likes:number;comments:number;views:number;follows:number};
+type PlatformPostMetric={id:string;title:string;contentType:string;status:string;createdAt:string;author:string;likes:number;comments:number;views:number};
+type PlatformAnalytics={artists:number;publications:number;pending:number;likes:number;comments:number;views:number;follows:number;topPosts:PlatformPostMetric[]};
 type ArtistMedia = {
   id:string; title:string; description:string; kind:string; genre:string; mediaUrl:string;
   mimeType:string; sizeBytes:number; downloadAllowed:boolean; status:string; createdAt:string; artist:string;
@@ -171,6 +172,13 @@ export default function AdminPublishPage() {
     </form>:<>
       <div className="admin-session-bar"><div><strong>{admin.displayName}</strong><span>{admin.email} · {admin.role}</span></div><Link className="admin-edit" href="/admin/comunidade">Moderação da comunidade ↗</Link><button className="button button-light" type="button" onClick={logout} disabled={busy}>Terminar sessão</button></div>
       {analytics&&<section className="admin-engagement-overview"><div><span>ARTISTAS</span><strong>{analytics.artists}</strong></div><div><span>PUBLICAÇÕES</span><strong>{analytics.publications}</strong></div><div><span>GOSTOS</span><strong>{analytics.likes}</strong></div><div><span>COMENTÁRIOS</span><strong>{analytics.comments}</strong></div><div><span>VISUALIZAÇÕES ÚNICAS</span><strong>{analytics.views}</strong></div><div><span>SEGUIMENTOS</span><strong>{analytics.follows}</strong></div><div><span>POR APROVAR</span><strong>{analytics.pending}</strong></div></section>}
+      {analytics&&<section className="admin-publication-list admin-engagement-list">
+        <div className="admin-list-heading"><h2>Desempenho das publicações dos artistas</h2><span>Últimas {analytics.topPosts.length}</span></div>
+        {analytics.topPosts.length===0?<p className="admin-security-note">Ainda não há publicações de artistas para analisar.</p>:analytics.topPosts.map(post=><article className="admin-publication-item" key={post.id}>
+          <div><span>{post.contentType.toUpperCase()} · {post.status.toUpperCase()}</span><h3>{post.title||"Publicação sem título"}</h3><p>Por {post.author} · {new Date(post.createdAt).toLocaleDateString("pt-AO")}</p></div>
+          <div className="admin-engagement-metrics"><span>♡ {post.likes}</span><span>◌ {post.comments}</span><span>◉ {post.views}</span></div>
+        </article>)}
+      </section>}
       <form key={editing?.id??"new-publication"} className="admin-publish-form" onSubmit={submit}>
         <h2>{editing?"Editar publicação":"Nova publicação"}</h2>
         <div className="admin-form-row">
