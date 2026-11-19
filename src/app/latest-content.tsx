@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 
 type Publication = {
@@ -100,7 +101,7 @@ export default function LatestContent() {
                 <span>{labels[post.type] ?? post.type.toUpperCase()}</span>
                 {post.featured && <span className="latest-featured">EM DESTAQUE</span>}
               </div>
-              {post.imageUrl && <img className="latest-image" src={post.imageUrl} alt={post.title} loading="lazy" />}
+              {post.imageUrl && <Image className="latest-image" src={post.imageUrl} alt={post.title} width={960} height={540} unoptimized />}
               <div className="latest-card-content">
                 <span className="latest-category">{post.genre}</span>
                 <h3>{post.title}</h3>
