@@ -158,7 +158,7 @@ export default function HomePage() {
             <a className="social-link" href={social.href} key={social.label} target="_blank" rel="noopener noreferrer" aria-label={`Procurar ${social.label}: ${social.account}`} title={`Procurar ${social.account} no ${social.label}`}>
               <span aria-hidden="true">{social.mark}</span><span className="social-copy"><b>{social.label}</b><small>{social.account}</small></span>
             </a>
-          ))}}
+          ))}
         </div>
         <div className="footer-meta"><span>CRIADO POR MC AG EIGI</span><span>© {new Date().getFullYear()} · LUNDA SUL, ANGOLA</span></div>
       </footer>
