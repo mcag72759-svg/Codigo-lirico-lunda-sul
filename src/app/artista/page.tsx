@@ -110,8 +110,8 @@ export default function ArtistStudioPage(){
       }
       const response=await fetch("/api/community/posts",{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({
         title:title.trim(),contentType:category,body:body.trim(),mediaUrl,mediaType,sizeBytes,visibility,
-        scheduledAt:scheduledAt||null,location:location.trim(),organizer:organizer.trim(),
-        eventStartsAt:eventStartsAt||null,ticketPrice:ticketPrice.trim(),ticketUrl:ticketUrl.trim(),
+        scheduledAt:scheduledAt?new Date(scheduledAt).toISOString():null,location:location.trim(),organizer:organizer.trim(),
+        eventStartsAt:eventStartsAt?new Date(eventStartsAt).toISOString():null,ticketPrice:ticketPrice.trim(),ticketUrl:ticketUrl.trim(),
       })});
       const data=await response.json();
       if(!response.ok)throw new Error(data.error??"Não foi possível enviar a publicação.");
