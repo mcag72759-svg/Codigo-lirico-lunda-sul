@@ -39,7 +39,7 @@ export default function HomePage() {
           <a href="#oportunidades">Oportunidades</a>
           <Link href="/parcerias">Parcerias</Link>
         </nav>
-        <div className="header-account-links"><Link className="header-cta" href="/artistas/entrar">Entrar <span aria-hidden="true">↗</span></Link><Link className="header-register" href="/artistas/cadastro">Criar conta</Link></div>
+        <div className="header-account-links"><Link className="header-cta" href="/artistas/entrar">Entrar <span aria-hidden="true">↗</span></Link><Link className="header-register" href="/artistas/cadastro">Criar conta</Link><Link className="header-register" href="/parcerias">Parcerias</Link><Link className="header-register" href="/admin">Administração</Link></div>
       </header>
 
       <section className="hero" aria-labelledby="hero-title">
