@@ -1,4 +1,4 @@
-import { randomBytes, scryptSync } from "node:crypto";
+import { createHash, randomBytes, scryptSync } from "node:crypto";
 import { and, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
@@ -24,16 +24,18 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Não encontrámos uma candidatura aprovada com estes dados. Confirma o código e o e-mail." }, { status: 403 });
   }
   const [existing] = await db.select({ id: artistAccounts.id }).from(artistAccounts).where(eq(artistAccounts.applicationId, application.id)).limit(1);
-  if (existing) {
-    return NextResponse.json({ error: "Esta conta já foi criada. Entra com o teu e-mail e palavra-passe." }, { status: 409 });
-  }
   const salt = randomBytes(16).toString("hex");
   const hash = scryptSync(password, salt, 64).toString("hex");
-  const accountId = randomBytes(16).toString("hex");
-  await db.insert(artistAccounts).values({ id: accountId, applicationId: application.id, passwordSalt: salt, passwordHash: hash, createdAt: new Date(), updatedAt: new Date() });
+  const accountId = existing?.id ?? randomBytes(16).toString("hex");
+  if (existing) {
+    await db.update(artistAccounts).set({ passwordSalt: salt, passwordHash: hash, updatedAt: new Date() }).where(eq(artistAccounts.id, accountId));
+    await db.delete(artistSessions).where(eq(artistSessions.accountId, accountId));
+  } else {
+    await db.insert(artistAccounts).values({ id: accountId, applicationId: application.id, passwordSalt: salt, passwordHash: hash, createdAt: new Date(), updatedAt: new Date() });
+  }
   const token = randomBytes(32).toString("hex");
   const expiresAt = new Date(Date.now() + SESSION_SECONDS * 1000);
-  await db.insert(artistSessions).values({ id: randomBytes(16).toString("hex"), accountId, tokenHash: (await import("node:crypto")).createHash("sha256").update(token).digest("hex"), expiresAt, createdAt: new Date() });
+  await db.insert(artistSessions).values({ id: randomBytes(16).toString("hex"), accountId, tokenHash: createHash("sha256").update(token).digest("hex"), expiresAt, createdAt: new Date() });
   const response = NextResponse.json({ ok: true, redirectTo: "/artistas/painel" }, { status: 201 });
   response.cookies.set({ name: ARTIST_SESSION_COOKIE, value: token, httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/", maxAge: SESSION_SECONDS });
   return response;
