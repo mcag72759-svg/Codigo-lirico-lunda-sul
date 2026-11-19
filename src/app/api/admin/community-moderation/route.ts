@@ -16,8 +16,12 @@ export async function GET() {
   }
   const [posts, reports] = await Promise.all([
     db.select({
-      id: communityPosts.id, body: communityPosts.body, mediaUrl: communityPosts.mediaUrl,
+      id: communityPosts.id, title:communityPosts.title, contentType:communityPosts.contentType,
+      body: communityPosts.body, mediaUrl: communityPosts.mediaUrl,
       mediaType: communityPosts.mediaType, visibility: communityPosts.visibility,
+      location:communityPosts.location, organizer:communityPosts.organizer,
+      eventStartsAt:communityPosts.eventStartsAt, ticketPrice:communityPosts.ticketPrice,
+      ticketUrl:communityPosts.ticketUrl, scheduledAt:communityPosts.scheduledAt,
       createdAt: communityPosts.createdAt, authorId: communityPosts.authorId,
       artist: artistApplications.stageName, municipality: artistApplications.municipality,
     }).from(communityPosts)
