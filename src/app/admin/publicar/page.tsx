@@ -23,9 +23,10 @@ export default function AdminPublishPage() {
     event.preventDefault();
     setBusy(true);
     setMessage("");
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     const payload = Object.fromEntries(form.entries());
-    payload.featured = featured ? "true" : "false";
+    payload.featured = featured;
 
     try {
       const response = await fetch("/api/admin/content", {
@@ -36,7 +37,7 @@ export default function AdminPublishPage() {
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error ?? "Não foi possível publicar.");
-      event.currentTarget.reset();
+      formElement.reset();
       setFeatured(false);
       setMessage("Publicação criada com sucesso.");
     } catch (error) {
