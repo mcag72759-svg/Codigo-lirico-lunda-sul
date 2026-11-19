@@ -12,7 +12,7 @@ export default function HomePage() {
     <header className="site-header">
       <Link className="brand" href="/" aria-label="Código Lírico — início"><span className="brand-symbol">CL</span><span className="brand-wordmark">CÓDIGO <b>LÍRICO</b></span></Link>
       <nav className="main-nav" aria-label="Navegação principal">
-        <a href="#sobre">Sobre</a><a href="#areas">Explorar</a><a href="#conteudos">Publicações</a><a href="#oportunidades">Oportunidades</a>
+        <a href="#sobre">Sobre</a><a href="#areas">Explorar</a><a href="#conteudos">Publicações</a><Link href="/downloads">Downloads</Link><a href="#oportunidades">Oportunidades</a>
       </nav>
       <Link className="header-cta" href="/admin/publicar">Área administrativa <span>↗</span></Link>
     </header>
