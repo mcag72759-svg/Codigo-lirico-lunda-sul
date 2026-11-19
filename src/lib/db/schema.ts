@@ -15,6 +15,33 @@ import {
 const timestamptz = (name: string) =>
   timestamp(name, { withTimezone: true, mode: "date" });
 
+
+export const artistApplications = pgTable("artist_applications", {
+  id: text("id").primaryKey(),
+  code: text("code").notNull(),
+  stageName: text("stage_name").notNull(),
+  fullName: text("full_name").notNull(),
+  municipality: text("municipality").notNull(),
+  genre: text("genre").notNull(),
+  email: text("email").notNull(),
+  phone: text("phone").notNull(),
+  bio: text("bio").notNull(),
+  link: text("link").notNull(),
+  photoUrl: text("photo_url").notNull(),
+  status: text("status").notNull(),
+  createdAt: timestamptz("created_at").notNull(),
+  reviewedAt: timestamptz("reviewed_at"),
+  requirements: text("requirements").notNull(),
+  deadline: timestamptz("deadline"),
+  decisionNote: text("decision_note").notNull(),
+  reviewedBy: text("reviewed_by"),
+  updatedAt: timestamptz("updated_at").notNull(),
+}, (table) => ({
+  codeUnique: uniqueIndex("artist_applications_code_key").on(table.code),
+  emailIdx: index("artist_applications_email_idx").on(table.email),
+  statusIdx: index("artist_applications_status_idx").on(table.status),
+}));
+
 export const artistAccounts = pgTable("artist_accounts", {
   id: text("id").primaryKey(),
   applicationId: text("application_id").notNull(),
