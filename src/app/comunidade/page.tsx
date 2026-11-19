@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { upload } from "@vercel/blob/client";
 import { useCallback, useEffect, useState } from "react";
 import type { FormEvent } from "react";
@@ -182,9 +183,10 @@ export default function CommunityPage(){
           {post.status!=="approved"?<span className="community-status">{post.status==="pending"?"A aguardar revisão":"Não aprovado"}</span>:artist&&!post.isMine&&<button className="community-follow" type="button" onClick={()=>follow(post.authorId)} disabled={busy}>{post.isFollowing?"A seguir":"Seguir"}</button>}
         </div>
         {post.body&&<p className="community-post-body">{post.body}</p>}
-        {post.mediaUrl&&post.mediaType.startsWith("image/")&&<img className="community-post-image" src={post.mediaUrl} alt={"Imagem partilhada por "+post.author}/>}
+        {post.mediaUrl&&post.mediaType.startsWith("image/")&&<Image className="community-post-image" src={post.mediaUrl} alt={"Imagem partilhada por "+post.author} width={1200} height={900} unoptimized/>}
         {post.mediaUrl&&post.mediaType.startsWith("video/")&&<video className="community-post-video" src={post.mediaUrl} controls playsInline preload="metadata"/>}
         {post.mediaUrl&&post.mediaType.startsWith("audio/")&&<audio className="community-post-audio" src={post.mediaUrl} controls preload="none"/>}
+        {post.mediaUrl&&post.status==="approved"&&<a className="download-link community-download" href={`${post.mediaUrl}${post.mediaUrl.includes("?")?"&":"?"}download=1`} target="_blank" rel="noreferrer">Descarregar anexo ↓</a>}
         {post.status==="approved"&&<div className="community-post-actions">
           <button type="button" onClick={()=>react(post.id)} disabled={busy}>{post.myReaction?"♥ Gostei":"♡ Gostar"} · {post.reactionCount}</button>
           <button type="button" onClick={()=>toggleComments(post.id)}>Comentários · {post.commentCount}</button>
