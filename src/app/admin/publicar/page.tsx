@@ -110,7 +110,7 @@ export default function AdminPublishPage() {
         artist:String(data.get("artist")??""),genre:String(data.get("genre")??""),
         description:String(data.get("description")),link:String(data.get("link")??""),
         mediaUrl,imageUrl,featured,status:String(data.get("status")??"published"),
-        scheduledAt:String(data.get("scheduledAt")??""),eventStartsAt:String(data.get("eventStartsAt")??""),
+        scheduledAt:data.get("scheduledAt")?new Date(String(data.get("scheduledAt"))).toISOString():"",eventStartsAt:data.get("eventStartsAt")?new Date(String(data.get("eventStartsAt"))).toISOString():"",
         location:String(data.get("location")??""),organizer:String(data.get("organizer")??""),
         ticketPrice:String(data.get("ticketPrice")??""),ticketUrl:String(data.get("ticketUrl")??"")
       };
