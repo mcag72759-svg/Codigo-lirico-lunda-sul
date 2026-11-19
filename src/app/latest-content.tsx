@@ -25,8 +25,8 @@ export default function LatestContent() {
       <div className="latest-card-content"><span className="latest-category">{p.genre}</span><h3>{p.title}</h3><p className="latest-byline">Por {p.artist}</p><p className="latest-description">{p.description}</p>
       {p.type==="video"&&p.audioUrl&&<video className="latest-video" controls preload="none" playsInline src={p.audioUrl}>O teu navegador não suporta vídeo.</video>}
       {(p.type==="music"||p.type==="podcast")&&p.audioUrl&&<audio controls preload="none" src={p.audioUrl}>O teu navegador não suporta áudio.</audio>}
-      {p.audioUrl&&<a className="download-link" href={p.audioUrl} target="_blank" rel="noreferrer" download>Descarregar ficheiro ↗</a>}
-      {p.imageUrl&&<a className="download-link" href={p.imageUrl} target="_blank" rel="noreferrer" download>Descarregar capa ↗</a>}
+      {p.audioUrl&&<a className="download-link" href={`${p.audioUrl}${p.audioUrl.includes("?")?"&":"?"}download=1`} target="_blank" rel="noreferrer" download>Descarregar ficheiro ↗</a>}
+      {p.imageUrl&&<a className="download-link" href={`${p.imageUrl}${p.imageUrl.includes("?")?"&":"?"}download=1`} target="_blank" rel="noreferrer" download>Descarregar capa ↗</a>}
       {p.link&&<a className="underlined-link" href={p.link} target="_blank" rel="noreferrer">Abrir ligação externa <span>↗</span></a>}
       </div></article>)}</div>}
   </section>;
