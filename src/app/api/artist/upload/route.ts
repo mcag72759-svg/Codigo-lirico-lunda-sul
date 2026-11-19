@@ -22,7 +22,7 @@ export async function POST(request: Request) {
         if (!data.applicationId) throw new Error("Artista inválido no envio.");
         const mime = blob.contentType || "application/octet-stream";
         const kind = mime.startsWith("audio/") ? "audio" : mime.startsWith("video/") ? "video" : mime.startsWith("image/") ? "image" : "document";
-        await db.insert(artistMedia).values({ id: randomUUID(), applicationId: data.applicationId, title: blob.pathname.split("/").pop() || "Ficheiro", description: "", kind, genre: "", mediaUrl: blob.url, mimeType: mime, sizeBytes: blob.size, downloadAllowed: true, status: "pending", createdAt: new Date() });
+        await db.insert(artistMedia).values({ id: randomUUID(), applicationId: data.applicationId, title: blob.pathname.split("/").pop() || "Ficheiro", description: "", kind, genre: "", mediaUrl: blob.url, mimeType: mime, sizeBytes: 0, downloadAllowed: true, status: "pending", createdAt: new Date() });
       },
     });
     return NextResponse.json(result);
