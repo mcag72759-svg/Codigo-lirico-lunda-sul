@@ -1,4 +1,5 @@
 import Link from "next/link";
+import LatestContent from "./latest-content";
 
 const areas = [
   {
@@ -124,6 +125,8 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      <LatestContent />
 
       <section className="creator-section section-wrap" id="criador">
         <div className="section-kicker">05 / QUEM ESTÁ POR TRÁS</div>
