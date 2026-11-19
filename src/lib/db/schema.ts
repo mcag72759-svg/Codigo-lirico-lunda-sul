@@ -261,14 +261,18 @@ export const communityPosts = pgTable("community_posts", {
 
 export const communityConversations = pgTable("community_conversations", {
   id: text("id").primaryKey(),
-  participantA: text("participant_a").notNull(),
-  participantB: text("participant_b").notNull(),
+  createdBy: text("created_by").notNull(),
   createdAt: timestamptz("created_at").notNull(),
-  updatedAt: timestamptz("updated_at").notNull(),
+  lastMessageAt: timestamptz("last_message_at").notNull(),
+});
+
+export const communityConversationMembers = pgTable("community_conversation_members", {
+  conversationId: text("conversation_id").notNull(),
+  memberId: text("member_id").notNull(),
+  joinedAt: timestamptz("joined_at").notNull(),
 }, (table) => ({
-  participantPairUnique: uniqueIndex("community_conversations_pair_key").on(table.participantA, table.participantB),
-  participantAIdx: index("community_conversations_participant_a_idx").on(table.participantA, table.updatedAt.desc()),
-  participantBIdx: index("community_conversations_participant_b_idx").on(table.participantB, table.updatedAt.desc()),
+  memberPairUnique: uniqueIndex("community_conversation_members_pkey").on(table.conversationId, table.memberId),
+  memberIdx: index("community_conversation_members_member_idx").on(table.memberId),
 }));
 
 export const communityPostViews = pgTable("community_post_views", {
