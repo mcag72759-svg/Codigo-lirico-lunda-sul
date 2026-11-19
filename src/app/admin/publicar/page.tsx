@@ -25,7 +25,7 @@ export default function AdminPublishPage() {
     setMessage("");
     const formElement = event.currentTarget;
     const form = new FormData(formElement);
-    const payload = Object.fromEntries(form.entries());
+    const payload: Record<string, string | boolean> = Object.fromEntries(form.entries()) as Record<string, string>;
     payload.featured = featured;
 
     try {
