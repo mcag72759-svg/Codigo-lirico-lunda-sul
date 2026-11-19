@@ -14,8 +14,13 @@ type ArtistMedia = {
   id:string; title:string; description:string; kind:string; genre:string; mediaUrl:string;
   mimeType:string; sizeBytes:number; downloadAllowed:boolean; status:string; createdAt:string; artist:string;
 };
+type ArtistApplication = {
+  id:string; stageName:string; fullName:string; municipality:string; genre:string; email:string;
+  phone:string; bio:string; link:string; status:string; createdAt:string;
+};
 const types = [["article","Artigo / notícia"],["music","Música"],["video","Vídeo"],["announcement","Comunicado"],["poetry","Poesia / literatura"],["event","Evento"],["opportunity","Oportunidade"],["gallery","Galeria"]];
 const statusLabels:Record<string,string>={pending:"A aguardar revisão",approved:"Aprovado e público",rejected:"Não aprovado"};
+const applicationStatusLabels:Record<string,string>={pending:"Candidatura pendente",approved:"Aprovada · pode activar a conta",rejected:"Não aprovada"};
 
 export default function AdminPublishPage() {
   const [admin,setAdmin]=useState<AdminUser|null>(null);
@@ -25,21 +30,25 @@ export default function AdminPublishPage() {
   const [message,setMessage]=useState("");
   const [items,setItems]=useState<Publication[]>([]);
   const [artistMediaItems,setArtistMediaItems]=useState<ArtistMedia[]>([]);
+  const [artistApplications,setArtistApplications]=useState<ArtistApplication[]>([]);
   const [editing,setEditing]=useState<Publication|null>(null);
   const [featured,setFeatured]=useState(false);
   const [mediaFile,setMediaFile]=useState<File|null>(null);
   const [coverFile,setCoverFile]=useState<File|null>(null);
 
   const loadItems=useCallback(async()=>{
-    const [contentResponse,mediaResponse]=await Promise.all([
+    const [contentResponse,mediaResponse,applicationsResponse]=await Promise.all([
       fetch("/api/admin/content",{credentials:"same-origin",cache:"no-store"}),
-      fetch("/api/admin/artist-media",{credentials:"same-origin",cache:"no-store"})
+      fetch("/api/admin/artist-media",{credentials:"same-origin",cache:"no-store"}),
+      fetch("/api/admin/artist-applications",{credentials:"same-origin",cache:"no-store"})
     ]);
-    const [contentData,mediaData]=await Promise.all([contentResponse.json(),mediaResponse.json()]);
+    const [contentData,mediaData,applicationsData]=await Promise.all([contentResponse.json(),mediaResponse.json(),applicationsResponse.json()]);
     if(!contentResponse.ok)throw new Error(contentData.error??"Não foi possível carregar as publicações.");
     if(!mediaResponse.ok)throw new Error(mediaData.error??"Não foi possível carregar os envios dos artistas.");
+    if(!applicationsResponse.ok)throw new Error(applicationsData.error??"Não foi possível carregar as candidaturas.");
     setItems(contentData.items??[]);
     setArtistMediaItems(mediaData.items??[]);
+    setArtistApplications(applicationsData.items??[]);
   },[]);
 
   useEffect(()=>{
@@ -66,7 +75,7 @@ export default function AdminPublishPage() {
   async function logout(){
     setBusy(true);
     try{await fetch("/api/admin/session",{method:"DELETE",credentials:"same-origin"});}
-    finally{setAdmin(null);setItems([]);setArtistMediaItems([]);setEditing(null);setBusy(false);setMessage("Sessão terminada.");}
+    finally{setAdmin(null);setItems([]);setArtistMediaItems([]);setArtistApplications([]);setEditing(null);setBusy(false);setMessage("Sessão terminada.");}
   }
 
   async function sendFile(file:File,kind:"media"|"cover"){
@@ -131,6 +140,16 @@ export default function AdminPublishPage() {
     finally{setBusy(false);}
   }
 
+  async function reviewArtistApplication(id:string,status:"approved"|"rejected"){
+    setBusy(true);setMessage(status==="approved"?"A aprovar candidatura…":"A rejeitar candidatura…");
+    try{
+      const r=await fetch("/api/admin/artist-applications",{method:"PATCH",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,status})});
+      const j=await r.json();if(!r.ok)throw new Error(j.error??"Não foi possível rever a candidatura.");
+      await loadItems();setMessage(status==="approved"?"Candidatura aprovada. O artista já pode activar a sua conta com o código que recebeu.":"Candidatura rejeitada.");
+    }catch(e){setMessage(e instanceof Error?e.message:"Erro ao rever a candidatura.");}
+    finally{setBusy(false);}
+  }
+
   return <main className="admin-publish-page">
     <Link className="admin-back-link" href="/">← Voltar ao Código Lírico</Link>
     <div className="admin-publish-heading"><span className="section-kicker">CENTRO DE ADMINISTRAÇÃO / CONTEÚDO</span><h1>Gestão do <em>Código Lírico.</em></h1><p>Publica a partir do teu dispositivo, actualiza conteúdos e revê os trabalhos enviados pelos artistas.</p></div>
@@ -181,6 +200,22 @@ export default function AdminPublishPage() {
           <div><span>{item.kind.toUpperCase()} · {statusLabels[item.status]??item.status}</span><h3>{item.title}</h3><p>{item.artist} · {item.genre} · {(item.sizeBytes/1048576).toFixed(1)} MB</p><a className="download-link" href={item.mediaUrl} target="_blank" rel="noreferrer">Pré-visualizar ficheiro ↗</a></div>
           {item.status==="pending"&&<div className="admin-item-actions"><button className="admin-edit" type="button" onClick={()=>reviewArtistFile(item.id,"approved")} disabled={busy}>Aprovar</button><button className="admin-delete" type="button" onClick={()=>reviewArtistFile(item.id,"rejected")} disabled={busy}>Rejeitar</button></div>}
         </article>)}
+      </section>
+
+      <section className="admin-publication-list">
+        <div className="admin-list-heading"><h2>Candidaturas de artistas</h2><span>{artistApplications.length} registos</span></div>
+        {artistApplications.length===0?<p className="admin-security-note">Ainda não existem candidaturas. Os novos artistas podem candidatar-se em /artista/cadastro.</p>:artistApplications.map(item=><article className="admin-publication-item" key={item.id}>
+          <div>
+            <span>{applicationStatusLabels[item.status]??item.status} · {new Date(item.createdAt).toLocaleDateString("pt-AO")}</span>
+            <h3>{item.stageName}</h3>
+            <p>{item.fullName} · {item.municipality} · {item.genre}</p>
+            <p>{item.email} · {item.phone}</p>
+            <p>{item.bio}</p>
+            {item.link&&<a className="download-link" href={item.link} target="_blank" rel="noreferrer">Ver portefólio ↗</a>}
+          </div>
+          {item.status==="pending"&&<div className="admin-item-actions"><button className="admin-edit" type="button" onClick={()=>reviewArtistApplication(item.id,"approved")} disabled={busy}>Aprovar</button><button className="admin-delete" type="button" onClick={()=>reviewArtistApplication(item.id,"rejected")} disabled={busy}>Rejeitar</button></div>}
+        </article>)}
+        <p className="admin-security-note">A aprovação não cria uma palavra-passe. O artista activa a própria conta com o código privado recebido ao candidatar-se.</p>
       </section>
     </>}
     {message&&<p className="admin-form-message" role="status">{message}</p>}
