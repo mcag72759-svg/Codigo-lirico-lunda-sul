@@ -81,6 +81,7 @@ export async function POST(request: Request) {
       id: platformAdmins.id,
       displayName: platformAdmins.displayName,
       email: platformAdmins.email,
+      role: platformAdmins.role,
       active: platformAdmins.active,
       passwordSalt: platformAdmins.passwordSalt,
       passwordHash: platformAdmins.passwordHash,
@@ -110,7 +111,7 @@ export async function POST(request: Request) {
 
   const response = NextResponse.json({
     ok: true,
-    admin: { displayName: admin.displayName, email: admin.email },
+    admin: { displayName: admin.displayName, email: admin.email, role: admin.role },
   });
   response.cookies.set({
     name: ADMIN_SESSION_COOKIE,

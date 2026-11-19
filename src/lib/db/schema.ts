@@ -1,5 +1,6 @@
 import {
   bigserial,
+  bigint,
   boolean,
   date,
   index,
@@ -14,6 +15,28 @@ import {
 const timestamptz = (name: string) =>
   timestamp(name, { withTimezone: true, mode: "date" });
 
+export const artistApplications = pgTable("artist_applications", {
+  id: text("id").primaryKey(),
+  code: text("code").notNull(),
+  stageName: text("stage_name").notNull(),
+  fullName: text("full_name").notNull(),
+  municipality: text("municipality").notNull(),
+  genre: text("genre").notNull(),
+  email: text("email").notNull(),
+  phone: text("phone").notNull(),
+  bio: text("bio").notNull(),
+  link: text("link").notNull(),
+  photoUrl: text("photo_url").notNull(),
+  status: text("status").notNull(),
+  createdAt: timestamptz("created_at").notNull(),
+  reviewedAt: timestamptz("reviewed_at"),
+  requirements: text("requirements").notNull(),
+  deadline: timestamptz("deadline"),
+  decisionNote: text("decision_note").notNull(),
+  reviewedBy: text("reviewed_by"),
+  updatedAt: timestamptz("updated_at").notNull(),
+});
+
 export const artistAccounts = pgTable("artist_accounts", {
   id: text("id").primaryKey(),
   applicationId: text("application_id").notNull(),
@@ -24,6 +47,22 @@ export const artistAccounts = pgTable("artist_accounts", {
 }, (table) => ({
   applicationUnique: uniqueIndex("artist_accounts_application_id_key").on(table.applicationId),
 }));
+
+export const artistMedia = pgTable("artist_media", {
+  id: text("id").primaryKey(),
+  applicationId: text("application_id").notNull(),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  kind: text("kind").notNull(),
+  genre: text("genre").notNull(),
+  mediaUrl: text("media_url").notNull(),
+  mimeType: text("mime_type").notNull(),
+  sizeBytes: bigint("size_bytes", { mode: "number" }).notNull(),
+  downloadAllowed: boolean("download_allowed").notNull(),
+  status: text("status").notNull(),
+  createdAt: timestamptz("created_at").notNull(),
+  reviewedAt: timestamptz("reviewed_at"),
+});
 
 export const artistSessions = pgTable("artist_sessions", {
   id: text("id").primaryKey(),
