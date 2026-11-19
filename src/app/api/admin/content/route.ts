@@ -1,135 +1,151 @@
-import { createHash, randomUUID } from "node:crypto";
-import { and, eq, gt } from "drizzle-orm";
+import { randomUUID } from "node:crypto";
+import { and, desc, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
-import {
-  platformAdmins,
-  platformAdminSessions,
-  platformAuditLog,
-  publishedContent,
-} from "@/lib/db/schema";
+import { platformAuditLog, platformPublications } from "@/lib/db/schema";
+import { getAdminSession, requestOriginIsSame } from "@/lib/security/admin-session";
 import { hasPermission } from "@/lib/security/permissions";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
-const SESSION_COOKIE = "cl_admin_session";
 const CONTENT_TYPES = new Set([
-  "article",
-  "music",
-  "video",
-  "announcement",
-  "poetry",
-  "event",
-  "opportunity",
-  "gallery",
+  "article", "music", "video", "announcement", "poetry", "event", "opportunity", "gallery",
 ]);
 
-function cleanText(value: unknown, maxLength: number): string | null {
-  if (typeof value !== "string") return null;
-  const cleaned = value.trim();
-  return cleaned.length > 0 && cleaned.length <= maxLength ? cleaned : null;
+function cleanText(value: unknown, maxLength: number): string {
+  return typeof value === "string" ? value.trim().slice(0, maxLength) : "";
 }
 
 function safeUrl(value: unknown): string {
-  if (typeof value !== "string" || !value.trim()) return "";
+  const raw = cleanText(value, 2048);
+  if (!raw) return "";
   try {
-    const url = new URL(value.trim());
+    const url = new URL(raw);
     return url.protocol === "https:" ? url.toString() : "";
   } catch {
     return "";
   }
 }
 
+export async function GET() {
+  const admin = await getAdminSession();
+  if (!admin || !hasPermission(admin, "content.manage")) {
+    return NextResponse.json({ error: "Acesso administrativo necessário." }, { status: 401 });
+  }
+
+  const items = await db
+    .select()
+    .from(platformPublications)
+    .orderBy(desc(platformPublications.createdAt))
+    .limit(100);
+  return NextResponse.json({ items });
+}
+
 export async function POST(request: Request) {
-  const requestOrigin = request.headers.get("origin");
-  if (requestOrigin && requestOrigin !== new URL(request.url).origin) {
+  if (!requestOriginIsSame(request)) {
     return NextResponse.json({ error: "Pedido de origem não permitida." }, { status: 403 });
   }
-  const cookieStore = await cookies();
-  const sessionToken = cookieStore.get(SESSION_COOKIE)?.value;
 
-  if (!sessionToken || sessionToken.length < 32 || sessionToken.length > 512) {
-    return NextResponse.json({ error: "Sessão administrativa necessária." }, { status: 401 });
-  }
-
-  const tokenHash = createHash("sha256").update(sessionToken).digest("hex");
-  const [session] = await db
-    .select({
-      adminId: platformAdmins.id,
-      displayName: platformAdmins.displayName,
-      active: platformAdmins.active,
-      permissions: platformAdmins.permissions,
-    })
-    .from(platformAdminSessions)
-    .innerJoin(platformAdmins, eq(platformAdminSessions.adminId, platformAdmins.id))
-    .where(
-      and(
-        eq(platformAdminSessions.tokenHash, tokenHash),
-        gt(platformAdminSessions.expiresAt, new Date()),
-        eq(platformAdmins.active, true),
-      ),
-    )
-    .limit(1);
-
-  if (!session || !hasPermission(session, "content.publish")) {
+  const admin = await getAdminSession();
+  if (!admin || !hasPermission(admin, "content.publish")) {
     return NextResponse.json({ error: "Não tens permissão para publicar conteúdo." }, { status: 403 });
   }
 
-  let body: unknown;
+  let input: unknown;
   try {
-    body = await request.json();
+    input = await request.json();
   } catch {
     return NextResponse.json({ error: "O conteúdo enviado não é válido." }, { status: 400 });
   }
-
-  if (!body || typeof body !== "object") {
+  if (!input || typeof input !== "object") {
     return NextResponse.json({ error: "Preenche os dados da publicação." }, { status: 400 });
   }
 
-  const input = body as Record<string, unknown>;
-  const type = cleanText(input.type, 32);
-  const title = cleanText(input.title, 160);
-  const genre = cleanText(input.genre, 80) ?? "Geral";
-  const description = cleanText(input.description, 12000);
-
-  if (!type || !CONTENT_TYPES.has(type) || !title || !description) {
+  const body = input as Record<string, unknown>;
+  const type = cleanText(body.type, 32);
+  const title = cleanText(body.title, 160);
+  const author = cleanText(body.artist ?? body.author, 120) || admin.displayName;
+  const category = cleanText(body.genre ?? body.category, 80) || "Geral";
+  const description = cleanText(body.description, 12000);
+  if (!CONTENT_TYPES.has(type) || !title || !description) {
     return NextResponse.json(
-      { error: "Tipo, título e descrição são obrigatórios. Confirma também o limite dos campos." },
+      { error: "Escolhe um tipo válido e preenche o título e a descrição." },
       { status: 400 },
     );
   }
 
-  const link = safeUrl(input.link);
-  const audioUrl = safeUrl(input.audioUrl);
-  const imageUrl = safeUrl(input.imageUrl);
+  const externalUrl = safeUrl(body.link ?? body.externalUrl);
+  const mediaUrl = safeUrl(body.mediaUrl ?? body.audioUrl ?? body.videoUrl);
+  const imageUrl = safeUrl(body.imageUrl);
   const id = randomUUID();
-  const featured = input.featured === true;
+  const now = new Date();
 
-  await db.insert(publishedContent).values({
+  await db.insert(platformPublications).values({
     id,
     type,
     title,
-    artist: cleanText(input.artist, 120) ?? session.displayName,
-    genre,
+    author,
+    category,
     description,
-    link,
-    audioUrl,
+    externalUrl,
+    mediaUrl,
     imageUrl,
-    featured,
-    createdAt: new Date(),
+    featured: body.featured === true,
+    status: body.status === "draft" ? "draft" : "published",
+    createdBy: admin.id,
+    createdAt: now,
+    updatedAt: now,
   });
 
   await db.insert(platformAuditLog).values({
-    actorAdminId: session.adminId,
+    actorAdminId: admin.id,
     action: "content.publish",
-    entityType: "published_content",
+    entityType: "platform_publications",
     entityId: id,
-    details: { type, title, featured },
-    createdAt: new Date(),
+    details: { type, title },
+    createdAt: now,
   });
 
   revalidatePath("/");
   return NextResponse.json({ ok: true, id }, { status: 201 });
+}
+
+export async function DELETE(request: Request) {
+  if (!requestOriginIsSame(request)) {
+    return NextResponse.json({ error: "Pedido de origem não permitida." }, { status: 403 });
+  }
+
+  const admin = await getAdminSession();
+  if (!admin || !hasPermission(admin, "content.manage")) {
+    return NextResponse.json({ error: "Não tens permissão para gerir publicações." }, { status: 403 });
+  }
+
+  let input: unknown;
+  try {
+    input = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Pedido inválido." }, { status: 400 });
+  }
+  const id = input && typeof input === "object" ? cleanText((input as Record<string, unknown>).id, 80) : "";
+  if (!id) return NextResponse.json({ error: "Identificador de publicação inválido." }, { status: 400 });
+
+  const [removed] = await db
+    .delete(platformPublications)
+    .where(eq(platformPublications.id, id))
+    .returning({ id: platformPublications.id, title: platformPublications.title });
+
+  if (!removed) return NextResponse.json({ error: "Publicação não encontrada." }, { status: 404 });
+
+  await db.insert(platformAuditLog).values({
+    actorAdminId: admin.id,
+    action: "content.delete",
+    entityType: "platform_publications",
+    entityId: removed.id,
+    details: { title: removed.title },
+    createdAt: new Date(),
+  });
+  revalidatePath("/");
+  return NextResponse.json({ ok: true });
 }
