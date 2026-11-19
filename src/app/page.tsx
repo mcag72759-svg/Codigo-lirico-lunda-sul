@@ -1,11 +1,13 @@
+import Link from "next/link";
+
 export default function HomePage() {
   return (
     <main className="page-shell">
       <header className="topbar">
-        <a className="brand" href="/" aria-label="Código Lírico, início">
+        <Link className="brand" href="/" aria-label="Código Lírico, início">
           <span className="brand-mark">CL</span>
           <span>CÓDIGO LÍRICO</span>
-        </a>
+        </Link>
         <span className="topbar-note">LUNDA SUL · ANGOLA</span>
       </header>
 
