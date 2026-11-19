@@ -149,19 +149,16 @@ export default function HomePage() {
         <div className="footer-socials" aria-label="Redes sociais do criador">
           <span className="footer-social-title">ACOMPANHA MC AG EIGI</span>
           {[
-            { label: "Facebook", mark: "f", href: process.env.NEXT_PUBLIC_SOCIAL_FACEBOOK_URL },
-            { label: "X / Twitter", mark: "𝕏", href: process.env.NEXT_PUBLIC_SOCIAL_X_URL },
-            { label: "Instagram", mark: "◎", href: process.env.NEXT_PUBLIC_SOCIAL_INSTAGRAM_URL },
-            { label: "YouTube", mark: "▶", href: process.env.NEXT_PUBLIC_SOCIAL_YOUTUBE_URL },
-          ].map((social) => social.href ? (
-            <a className="social-link" href={social.href} key={social.label} target="_blank" rel="noreferrer" aria-label={social.label}>
-              <span aria-hidden="true">{social.mark}</span>{social.label}
+            { label: "Facebook", account: "Aguinaldo AG Eigi", mark: "f", href: "https://www.facebook.com/search/top?q=Aguinaldo%20AG%20Eigi" },
+            { label: "YouTube", account: "MC AG EIGI", mark: "▶", href: "https://www.youtube.com/results?search_query=MC+AG+EIGI" },
+            { label: "TikTok", account: "MC AG EIGI", mark: "♪", href: "https://www.tiktok.com/search?q=MC%20AG%20EIGI" },
+            { label: "X / Twitter", account: "MC AG", mark: "𝕏", href: "https://x.com/search?q=MC%20AG" },
+            { label: "Instagram", account: "Aguinaldo AG mudico", mark: "◎", href: "https://www.instagram.com/explore/search/keyword/?q=Aguinaldo%20AG%20mudico" },
+          ].map((social) => (
+            <a className="social-link" href={social.href} key={social.label} target="_blank" rel="noopener noreferrer" aria-label={`Procurar ${social.label}: ${social.account}`} title={`Procurar ${social.account} no ${social.label}`}>
+              <span aria-hidden="true">{social.mark}</span><span className="social-copy"><b>{social.label}</b><small>{social.account}</small></span>
             </a>
-          ) : (
-            <span className="social-link social-link-pending" key={social.label} title="O endereço oficial será configurado">
-              <span aria-hidden="true">{social.mark}</span>{social.label}
-            </span>
-          ))}
+          ))}}
         </div>
         <div className="footer-meta"><span>CRIADO POR MC AG EIGI</span><span>© {new Date().getFullYear()} · LUNDA SUL, ANGOLA</span></div>
       </footer>
