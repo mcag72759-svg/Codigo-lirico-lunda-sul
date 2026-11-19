@@ -64,7 +64,6 @@ export default function LatestContent() {
               {post.featured && <span className="latest-featured">EM DESTAQUE</span>}
             </div>
             {post.imageUrl && (
-              // External media links are validated as HTTPS by the server before storage.
               <img className="latest-image" src={post.imageUrl} alt={post.title} loading="lazy" />
             )}
             <div className="latest-card-content">
