@@ -7,12 +7,18 @@ import { getArtistSession } from "@/lib/security/artist-session";
 export const runtime="nodejs";
 export async function GET(){
  const artist=await getArtistSession();if(!artist)return NextResponse.json({error:"Inicia sessão."},{status:401});
- const rows=await db.select({id:communityConversations.id,lastMessageAt:communityConversations.lastMessageAt,otherId:artistApplications.id,otherName:artistApplications.stageName})
- .from(communityConversationMembers).innerJoin(communityConversations,eq(communityConversationMembers.conversationId,communityConversations.id))
- .innerJoin(communityConversationMembers.as("other_member"),eq(communityConversationMembers.conversationId,communityConversationMembers.as("other_member").conversationId))
- .innerJoin(artistApplications,eq(communityConversationMembers.as("other_member").memberId,artistApplications.id))
- .where(eq(communityConversationMembers.memberId,artist.applicationId)).orderBy(desc(communityConversations.lastMessageAt)).limit(50);
- return NextResponse.json({conversations:rows});
+ const memberships=await db.select({conversationId:communityConversationMembers.conversationId})
+ .from(communityConversationMembers).where(eq(communityConversationMembers.memberId,artist.applicationId));
+ const conversations=await Promise.all(memberships.map(async m=>{
+  const [conversation]=await db.select({id:communityConversations.id,lastMessageAt:communityConversations.lastMessageAt})
+   .from(communityConversations).where(eq(communityConversations.id,m.conversationId)).limit(1);
+  const [other]=await db.select({id:artistApplications.id,stageName:artistApplications.stageName})
+   .from(communityConversationMembers).innerJoin(artistApplications,eq(communityConversationMembers.memberId,artistApplications.id))
+   .where(eq(communityConversationMembers.conversationId,m.conversationId))
+   .then(rows=>rows.filter(row=>row.id!==artist.applicationId).slice(0,1));
+  return conversation&&other?{...conversation,otherId:other.id,otherName:other.stageName}:null;
+ }));
+ return NextResponse.json({conversations:conversations.filter(Boolean).sort((a,b)=>b!.lastMessageAt.getTime()-a!.lastMessageAt.getTime()).slice(0,50)});
 }
 export async function POST(request:Request){
  const artist=await getArtistSession();if(!artist)return NextResponse.json({error:"Inicia sessão para enviar mensagens."},{status:401});
