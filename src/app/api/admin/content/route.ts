@@ -43,6 +43,10 @@ function safeUrl(value: unknown): string {
 }
 
 export async function POST(request: Request) {
+  const requestOrigin = request.headers.get("origin");
+  if (requestOrigin && requestOrigin !== new URL(request.url).origin) {
+    return NextResponse.json({ error: "Pedido de origem não permitida." }, { status: 403 });
+  }
   const cookieStore = await cookies();
   const sessionToken = cookieStore.get(SESSION_COOKIE)?.value;
 
