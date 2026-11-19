@@ -1,12 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type { FormEvent } from "react";
 
 type ApplicationResult = { email:string; activationCode:string; message:string };
 
 export default function ArtistRegistrationPage() {
+  const router=useRouter();
   const [busy,setBusy]=useState(false);
   const [message,setMessage]=useState("");
   const [result,setResult]=useState<ApplicationResult|null>(null);
@@ -39,7 +41,7 @@ export default function ArtistRegistrationPage() {
       const data=await response.json();
       if(!response.ok)throw new Error(data.error??"Não foi possível activar a conta.");
       setMessage("Conta criada com sucesso. A abrir o teu estúdio…");
-      window.location.assign("/artista");
+      router.push("/artista");
     } catch(error) {
       setMessage(error instanceof Error?error.message:"Não foi possível activar a conta.");
     } finally {
