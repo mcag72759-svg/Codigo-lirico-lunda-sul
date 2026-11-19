@@ -1,5 +1,6 @@
 import {
   bigserial,
+  bigint,
   boolean,
   date,
   index,
@@ -201,7 +202,7 @@ export const artistMedia = pgTable("artist_media", {
   genre: text("genre").notNull(),
   mediaUrl: text("media_url").notNull(),
   mimeType: text("mime_type").notNull(),
-  sizeBytes: bigserial("size_bytes", { mode: "number" }).notNull(),
+  sizeBytes: bigint("size_bytes", { mode: "number" }).notNull(),
   downloadAllowed: boolean("download_allowed").notNull(),
   status: text("status").notNull(),
   createdAt: timestamptz("created_at").notNull(),
