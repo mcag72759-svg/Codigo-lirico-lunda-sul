@@ -75,3 +75,26 @@ Configurar os endereços oficiais no ambiente da Vercel (e localmente, se necess
 - `NEXT_PUBLIC_SOCIAL_YOUTUBE_URL`
 
 Sem um endereço configurado, a rede aparece identificada como pendente em vez de apontar para um perfil inventado.
+
+
+## Área administrativa e publicações
+
+- Entrada administrativa: `/admin/publicar`.
+- Login: `POST /api/admin/login`; usa a conta activa em `platform_admins`, valida a palavra-passe com o segredo administrativo existente no ambiente (quando configurado) ou com o hash scrypt guardado na base de dados, e cria uma sessão aleatória.
+- Sessão: cookie `cl_admin_session`, HttpOnly, SameSite=Lax, Secure em produção, com validade de sete dias. A base guarda apenas SHA-256 do token.
+- Limite de tentativas: oito tentativas falhadas por endereço de origem em quinze minutos; o endereço é guardado apenas como hash.
+- Publicações: `POST /api/admin/content`; listar/gerir: `GET /api/admin/content`; apagar: `DELETE /api/admin/content`. Todas as operações de gestão exigem sessão e permissões.
+- Feed público: `GET /api/content`, junta as publicações antigas de música/podcast às novas publicações editoriais.
+- Tipos editoriais: artigo, música, vídeo, comunicado, poesia, evento, oportunidade e galeria. Os links de media e externos só aceitam HTTPS.
+- Novas tabelas: `platform_publications` e `platform_admin_login_attempts`; a migração aditiva está em `drizzle/0001_admin_publications.sql`.
+
+**Limite de armazenamento:** esta versão aceita URLs HTTPS para áudio, vídeo e imagens; não aceita upload de ficheiros binários ainda. O token de armazenamento existente foi sinalizado pela Vercel com um alerta de exposição e deve ser rodado antes de voltar a ser usado. Não publicar o token nem incluí-lo no código.
+
+## Redes sociais de MC AG EIGI
+
+A página apresenta Facebook (Aguinaldo AG Eigi), YouTube (MC AG EIGI), TikTok (MC AG EIGI), X/Twitter (MC AG) e Instagram (Aguinaldo AG mudico). Como foram fornecidos nomes de exibição e não URLs de perfil, os acessos actuais abrem a pesquisa da plataforma — não fingem ser links directos para contas verificadas. Substituir pelos URLs exactos dos perfis quando forem confirmados.
+
+## Segurança e dependências
+
+- A CI executa auditoria de dependências, testes, lint, typecheck e build.
+- O projecto foi actualizado para versões corrigidas do Next.js, React, Drizzle ORM e Vitest. Drizzle Kit foi removido temporariamente até existir uma versão segura compatível com a cadeia de ferramentas.
