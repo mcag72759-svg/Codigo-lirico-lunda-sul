@@ -162,3 +162,31 @@ export const platformFinanceEntries = pgTable("platform_finance_entries", {
 }, (table) => ({
   occurredDateIdx: index("idx_finance_entries_date").on(table.occurredAt.desc()),
 }));
+
+
+export const platformPublications = pgTable("platform_publications", {
+  id: text("id").primaryKey(),
+  type: text("type").notNull(),
+  title: text("title").notNull(),
+  author: text("author").notNull(),
+  category: text("category").notNull(),
+  description: text("description").notNull(),
+  externalUrl: text("external_url").notNull(),
+  mediaUrl: text("media_url").notNull(),
+  imageUrl: text("image_url").notNull(),
+  featured: boolean("featured").notNull(),
+  status: text("status").notNull(),
+  createdBy: text("created_by"),
+  createdAt: timestamptz("created_at").notNull(),
+  updatedAt: timestamptz("updated_at").notNull(),
+}, (table) => ({
+  statusCreatedIdx: index("platform_publications_status_created_idx").on(table.status, table.createdAt.desc()),
+}));
+
+export const platformAdminLoginAttempts = pgTable("platform_admin_login_attempts", {
+  id: bigserial("id", { mode: "number" }).primaryKey(),
+  ipHash: text("ip_hash").notNull(),
+  attemptedAt: timestamptz("attempted_at").notNull(),
+}, (table) => ({
+  ipTimeIdx: index("platform_admin_login_attempts_ip_time_idx").on(table.ipHash, table.attemptedAt.desc()),
+}));
