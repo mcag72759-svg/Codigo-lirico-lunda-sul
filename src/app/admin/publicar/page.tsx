@@ -141,7 +141,7 @@ export default function AdminPublishPage() {
       <button className="button button-light admin-submit" type="submit" disabled={busy}>{busy?"A verificar…":"Entrar no painel ↗"}</button>
       <p className="admin-security-note">Acesso reservado a administradores autorizados.</p>
     </form>:<>
-      <div className="admin-session-bar"><div><strong>{admin.displayName}</strong><span>{admin.email} · {admin.role}</span></div><button className="button button-light" type="button" onClick={logout} disabled={busy}>Terminar sessão</button></div>
+      <div className="admin-session-bar"><div><strong>{admin.displayName}</strong><span>{admin.email} · {admin.role}</span></div><Link className="admin-edit" href="/admin/comunidade">Moderação da comunidade ↗</Link><button className="button button-light" type="button" onClick={logout} disabled={busy}>Terminar sessão</button></div>
       <form key={editing?.id??"new-publication"} className="admin-publish-form" onSubmit={submit}>
         <h2>{editing?"Editar publicação":"Nova publicação"}</h2>
         <div className="admin-form-row">

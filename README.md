@@ -9,6 +9,7 @@ Plataforma cultural independente criada por MC AG EIGI, com foco em artistas, m�
 - Biblioteca pública de downloads para ficheiros publicados.
 - Estúdio privado do artista em `/artista`: autenticação para contas aprovadas, envio de áudio/vídeo, lista de envios e cancelamento de ficheiros pendentes.
 - Moderação administrativa de ficheiros de artistas; apenas material aprovado e autorizado aparece no feed público.
+- Comunidade de artistas aprovados em `/comunidade`: feed público e para seguidores, comentários, reacções, seguir criadores, denúncias e moderação administrativa de publicações pendentes.
 - Secções públicas com perfis de artistas aprovados, eventos e oportunidades lidos da base Neon.
 - Base de dados Neon PostgreSQL e acesso pelo Drizzle ORM, exclusivamente no servidor.
 - Registos administrativos de auditoria e limitação de tentativas de login.
@@ -48,6 +49,6 @@ npm audit --audit-level=high
 ```
 
 ## Limites claros desta versão
-Esta entrega é uma plataforma cultural/editorial com administração e área privada do artista. Ainda não é uma rede social aberta completa: registo público de novos membros, mensagens privadas, sistema público de seguidores, reacções e comentários não estão implementados nesta interface. As tabelas existentes para algumas destas funções permanecem na base, mas a sua presença não significa que já estejam activas no site.
+Esta entrega é uma plataforma cultural/editorial com administração, estúdio privado e uma comunidade reservada a artistas aprovados. Não existe registo público aberto nem mensagens privadas nesta versão. O feed, comentários, reacções, seguimento entre artistas, denúncias e moderação estão activos; novos posts ficam pendentes até revisão administrativa.
 
 Os links das redes sociais do criador usam pesquisas públicas enquanto os URLs directos dos perfis não forem configurados. A lista de eventos e oportunidades depende de registos mantidos na base de dados; cada entidade externa deve ser confirmada na sua fonte antes de qualquer participação.

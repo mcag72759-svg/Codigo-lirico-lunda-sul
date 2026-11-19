@@ -229,3 +229,59 @@ export const platformAdminLoginAttempts = pgTable("platform_admin_login_attempts
 }, (table) => ({
   ipTimeIdx: index("platform_admin_login_attempts_ip_time_idx").on(table.ipHash, table.attemptedAt.desc()),
 }));
+
+export const communityPosts = pgTable("community_posts", {
+  id: text("id").primaryKey(),
+  authorId: text("author_id").notNull(),
+  body: text("body").notNull(),
+  mediaUrl: text("media_url").notNull(),
+  mediaType: text("media_type").notNull(),
+  visibility: text("visibility").notNull(),
+  status: text("status").notNull(),
+  createdAt: timestamptz("created_at").notNull(),
+  updatedAt: timestamptz("updated_at").notNull(),
+}, (table) => ({
+  statusCreatedIdx: index("community_posts_status_created_idx").on(table.status, table.createdAt.desc()),
+  authorCreatedIdx: index("community_posts_author_created_idx").on(table.authorId, table.createdAt.desc()),
+}));
+
+export const communityComments = pgTable("community_comments", {
+  id: text("id").primaryKey(),
+  postId: text("post_id").notNull(),
+  authorId: text("author_id").notNull(),
+  body: text("body").notNull(),
+  createdAt: timestamptz("created_at").notNull(),
+}, (table) => ({
+  postCreatedIdx: index("community_comments_post_created_idx").on(table.postId, table.createdAt),
+}));
+
+export const communityReactions = pgTable("community_reactions", {
+  id: bigserial("id", { mode: "number" }).primaryKey(),
+  actorId: text("actor_id").notNull(),
+  contentId: text("content_id").notNull(),
+  reaction: text("reaction").notNull(),
+  createdAt: timestamptz("created_at").notNull(),
+}, (table) => ({
+  actorContentUnique: uniqueIndex("community_reactions_actor_id_content_id_key").on(table.actorId, table.contentId),
+  contentIdx: index("idx_community_reactions_content").on(table.contentId),
+}));
+
+export const communityBlocks = pgTable("community_blocks", {
+  blockerId: text("blocker_id").notNull(),
+  blockedId: text("blocked_id").notNull(),
+  createdAt: timestamptz("created_at").notNull(),
+}, (table) => ({
+  pairUnique: uniqueIndex("community_blocks_pkey").on(table.blockerId, table.blockedId),
+}));
+
+export const communityReports = pgTable("community_reports", {
+  id: bigserial("id", { mode: "number" }).primaryKey(),
+  reporterId: text("reporter_id").notNull(),
+  targetType: text("target_type").notNull(),
+  targetId: text("target_id").notNull(),
+  reason: text("reason").notNull(),
+  status: text("status").notNull(),
+  createdAt: timestamptz("created_at").notNull(),
+}, (table) => ({
+  statusCreatedIdx: index("idx_community_reports_status").on(table.status, table.createdAt.desc()),
+}));

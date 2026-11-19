@@ -20,7 +20,7 @@ export async function POST(request: Request) {
       body,
       request,
       onBeforeGenerateToken: async () => ({
-        allowedContentTypes: ["audio/mpeg", "audio/mp4", "audio/wav", "audio/x-wav", "video/mp4", "video/webm"],
+        allowedContentTypes: ["image/jpeg", "image/png", "image/webp", "audio/mpeg", "audio/mp4", "audio/wav", "audio/x-wav", "video/mp4", "video/webm"],
         maximumSizeInBytes: 200 * 1024 * 1024,
         addRandomSuffix: true,
         tokenPayload: JSON.stringify({ applicationId: artist.applicationId }),
