@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import type { FormEvent } from "react";
 
@@ -151,7 +152,7 @@ export default function AdminPublishPage() {
 
   return (
     <main className="admin-publish-page">
-      <a className="admin-back-link" href="/">← Voltar ao Código Lírico</a>
+      <Link className="admin-back-link" href="/">← Voltar ao Código Lírico</Link>
       <div className="admin-publish-heading">
         <span className="section-kicker">CENTRO DE ADMINISTRAÇÃO / CONTEÚDO</span>
         <h1>Gestão do <em>Código Lírico.</em></h1>
