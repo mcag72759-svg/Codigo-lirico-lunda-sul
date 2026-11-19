@@ -164,6 +164,23 @@ export const culturalOpportunities = pgTable("cultural_opportunities", {
   statusDeadlineIdx: index("cultural_opportunities_status_deadline_idx").on(table.status, table.deadline),
 }));
 
+
+export const partnerRequests = pgTable("partner_requests", {
+  id: text("id").primaryKey(),
+  contactName: text("contact_name").notNull(),
+  organization: text("organization").notNull(),
+  email: text("email").notNull(),
+  phone: text("phone").notNull(),
+  proposal: text("proposal").notNull(),
+  status: text("status").notNull(),
+  createdAt: timestamptz("created_at").notNull(),
+  reviewedBy: text("reviewed_by"),
+  decisionNote: text("decision_note").notNull(),
+  updatedAt: timestamptz("updated_at").notNull(),
+}, (table) => ({
+  statusCreatedIdx: index("partner_requests_status_created_idx").on(table.status, table.createdAt.desc()),
+}));
+
 export const platformAuditLog = pgTable("platform_audit_log", {
   id: bigserial("id", { mode: "number" }).primaryKey(),
   actorAdminId: text("actor_admin_id"),
