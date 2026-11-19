@@ -40,6 +40,8 @@ export default function HomePage() {
           <Link href="/artistas">Artistas</Link>
           <Link href="/comunidade">Comunidade</Link>
           <Link href="/downloads">Downloads</Link>
+          <Link href="/podcasts">Podcasts</Link>
+          <Link href="/mensagens">Mensagens</Link>
           <Link href="/parcerias">Parcerias</Link>
         </nav>
         <div className="header-account-links"><Link className="header-cta" href="/artistas/entrar">Entrar <span aria-hidden="true">↗</span></Link><Link className="header-register" href="/artistas/cadastro">Criar conta</Link><Link className="header-register" href="/parcerias">Parcerias</Link><Link className="header-register" href="/admin">Administração</Link></div>
@@ -164,7 +166,7 @@ export default function HomePage() {
             </a>
           ))}
         </div>
-        <div className="footer-meta"><Link href="/admin/publicar">Centro de administração ↗</Link><Link href="/parcerias">Parcerias ↗</Link><Link href="/comunidade">Comunidade ↗</Link><Link href="/downloads">Downloads ↗</Link><Link href="/admin/comunidade">Moderação ↗</Link><span>CRIADO POR MC AG EIGI</span><span>© {new Date().getFullYear()} · LUNDA SUL, ANGOLA</span></div>
+        <div className="footer-meta"><Link href="/admin/publicar">Centro de administração ↗</Link><Link href="/parcerias">Parcerias ↗</Link><Link href="/comunidade">Comunidade ↗</Link><Link href="/downloads">Downloads ↗</Link><Link href="/podcasts">Podcasts ↗</Link><Link href="/mensagens">Mensagens ↗</Link><Link href="/admin/comunidade">Moderação ↗</Link><span>CRIADO POR MC AG EIGI</span><span>© {new Date().getFullYear()} · LUNDA SUL, ANGOLA</span></div>
       </footer>
     </main>
   );
