@@ -30,7 +30,7 @@ export default function PartnershipsPage() {
       <label>E-mail profissional<input name="email" type="email" autoComplete="email" maxLength={254} required/></label>
       <label>Telefone (opcional)<input name="phone" type="tel" autoComplete="tel" maxLength={40}/></label>
       <label>Proposta e objectivo<textarea name="proposal" rows={7} minLength={20} maxLength={5000} placeholder="Conta-nos o que pretendes construir com o Código Lírico..." required/></label>
-      <label className="sr-only" aria-hidden="true">Website<input name="website" tabIndex={-1} autoComplete="off"/></label>
+      <div hidden aria-hidden="true"><input name="website" tabIndex={-1} autoComplete="off"/></div>
       <button className="button button-light admin-submit" disabled={busy}>{busy?"A enviar...":"Enviar proposta ↗"}</button>
       <p className="admin-security-note">Os dados serão usados apenas para avaliar e responder a esta proposta.</p>
     </form>
