@@ -125,9 +125,41 @@ export default function HomePage() {
         </div>
       </section>
 
+      <section className="creator-section section-wrap" id="criador">
+        <div className="section-kicker">05 / QUEM ESTÁ POR TRÁS</div>
+        <div className="creator-card">
+          <div className="creator-monogram" aria-hidden="true">AG<span>.</span></div>
+          <div className="creator-copy">
+            <span className="creator-label">IDEIA, VISÃO E CRIAÇÃO</span>
+            <h2>Aguinaldo Alves Fernando<br /><em>MC AG EIGI</em></h2>
+            <p>Sou MC AG EIGI, músico independente e estudante de Informática, natural da Lunda Sul. Acredito na força da cultura, da tecnologia e das palavras para aproximar pessoas e abrir caminhos. Criei o Código Lírico para dar mais espaço aos artistas, às histórias e aos talentos que merecem ser descobertos.</p>
+            <p className="creator-signature">Coração de prata. Visão sem fronteiras.</p>
+          </div>
+        </div>
+      </section>
+
       <footer className="site-footer">
-        <Link className="footer-brand" href="/"><span className="footer-mark">CL</span><span>CÓDIGO LÍRICO</span></Link>
-        <p>Uma plataforma para a cultura independente angolana.</p>
+        <div className="footer-main">
+          <Link className="footer-brand" href="/"><span className="footer-mark">CL</span><span>CÓDIGO LÍRICO</span></Link>
+          <p>Uma plataforma para a cultura independente angolana.</p>
+        </div>
+        <div className="footer-socials" aria-label="Redes sociais do criador">
+          <span className="footer-social-title">ACOMPANHA MC AG EIGI</span>
+          {[
+            { label: "Facebook", mark: "f", href: process.env.NEXT_PUBLIC_SOCIAL_FACEBOOK_URL },
+            { label: "X / Twitter", mark: "𝕏", href: process.env.NEXT_PUBLIC_SOCIAL_X_URL },
+            { label: "Instagram", mark: "◎", href: process.env.NEXT_PUBLIC_SOCIAL_INSTAGRAM_URL },
+            { label: "YouTube", mark: "▶", href: process.env.NEXT_PUBLIC_SOCIAL_YOUTUBE_URL },
+          ].map((social) => social.href ? (
+            <a className="social-link" href={social.href} key={social.label} target="_blank" rel="noreferrer" aria-label={social.label}>
+              <span aria-hidden="true">{social.mark}</span>{social.label}
+            </a>
+          ) : (
+            <span className="social-link social-link-pending" key={social.label} title="O endereço oficial será configurado">
+              <span aria-hidden="true">{social.mark}</span>{social.label}
+            </span>
+          ))}
+        </div>
         <div className="footer-meta"><span>CRIADO POR MC AG EIGI</span><span>© {new Date().getFullYear()} · LUNDA SUL, ANGOLA</span></div>
       </footer>
     </main>
