@@ -164,7 +164,6 @@ export async function POST(request: Request) {
   const conversation = await ensureConversation(artist.applicationId, otherId);
   const now = new Date();
   const [message] = await db.insert(communityMessages).values({
-    id: 0,
     conversationId: conversation.id,
     senderId: artist.applicationId,
     body: text,
