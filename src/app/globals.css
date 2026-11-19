@@ -45,3 +45,135 @@ a{color:inherit;text-decoration:none}button,input,select,textarea{font:inherit}b
 
 
 .artist-register-prompt{margin:18px 0 0;color:#aeb1b1;font-size:12px;line-height:1.7}.artist-register-prompt a{color:var(--silver);border-bottom:1px solid var(--copper);padding-bottom:3px}.artist-registration-code{padding:18px 20px;margin:18px 0;background:#202326;border:1px solid #80664f;color:var(--paper)}.artist-registration-code strong{display:block;margin:10px 0;color:#e4c4a7;font-size:18px;letter-spacing:.08em;overflow-wrap:anywhere;user-select:all}.artist-registration-code p{color:#b6babb;font-size:12px;line-height:1.7}.artist-registration-form{margin-top:24px}.artist-registration-form h2{margin-bottom:4px}
+
+
+/* Artist creator studio — dedicated editorial workspace */
+.artist-console{width:min(1120px,calc(100% - 40px));margin:0 auto 80px;color:var(--paper)}
+.artist-console-top{min-height:76px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:20px}
+.artist-console-brand{display:flex;align-items:center;gap:12px;font-size:10px;letter-spacing:.18em;font-weight:700}
+.artist-console-mark{width:38px;height:38px;border:1px solid var(--silver);border-radius:50%;display:grid;place-items:center;color:var(--silver);font-size:11px;letter-spacing:0}
+.artist-console-nav{display:flex;gap:22px;flex-wrap:wrap;color:#b6babc;font-size:11px}
+.artist-console-nav a:hover{color:var(--paper)}
+.artist-console-kicker{display:block;color:var(--copper);font-size:9px;letter-spacing:.2em;font-weight:700}
+.artist-console-login{max-width:720px;margin:70px auto 100px}
+.artist-console-login h1,.artist-console-hero h1{font-size:clamp(42px,7vw,76px);line-height:.97;letter-spacing:-.075em;margin:18px 0}
+.artist-console-login h1 em,.artist-console-hero h1 em,.artist-console-welcome h2 em{font-style:normal;color:var(--silver)}
+.artist-console-login>p,.artist-console-hero p{max-width:570px;color:#aeb1b1;font-size:14px;line-height:1.8}
+.artist-console-card{background:linear-gradient(145deg,#1a1d20,#141719 80%);border:1px solid #34393c;padding:28px}
+.artist-console-login-form{margin-top:34px;display:grid;gap:17px}
+.artist-console-login-form h2{font-size:22px;letter-spacing:-.04em;margin:0 0 5px}
+.artist-console-login-form label,.artist-console-form-card label{display:grid;gap:8px;color:#d4d7d7;font-size:11px;font-weight:600}
+.artist-console-login-form input,.artist-console-form-card input,.artist-console-form-card select,.artist-console-form-card textarea{width:100%;min-width:0;background:#0e1012;color:var(--paper);border:1px solid #3a4144;border-radius:2px;padding:13px 14px;font:inherit;font-size:14px}
+.artist-console-form-card textarea{resize:vertical;min-height:130px;line-height:1.7}
+.artist-console-primary{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:0 20px;background:var(--paper);color:#131517;border:1px solid var(--paper);font-weight:700;font-size:11px;letter-spacing:.06em;cursor:pointer}
+.artist-console-primary:hover{background:var(--silver);border-color:var(--silver)}
+.artist-console-primary:disabled{opacity:.55;cursor:not-allowed}
+.artist-console-hero{display:flex;justify-content:space-between;align-items:flex-end;gap:28px;padding:58px 0 36px;border-bottom:1px solid var(--line)}
+.artist-console-hero h1{font-size:clamp(36px,5vw,58px);margin:14px 0}
+.artist-console-hero-actions{display:grid;justify-items:end;gap:13px}
+.artist-console-account{font-size:8px;letter-spacing:.14em;color:#b5c9c0;border:1px solid #40564d;padding:8px 10px}
+.artist-console-hero-actions button{background:transparent;border:1px solid var(--line);color:#c3c7c8;padding:10px 13px;font-size:10px}
+.artist-console-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:22px 0 28px}
+.artist-console-stats article{min-width:0;padding:18px;background:#181b1e;border:1px solid var(--line);display:grid;gap:9px}
+.artist-console-stats article span{font-size:8px;color:var(--copper);letter-spacing:.17em;font-weight:700}
+.artist-console-stats article strong{font-size:clamp(24px,3vw,34px);letter-spacing:-.06em;font-variant-numeric:tabular-nums}
+.artist-console-stats article small{font-size:9px;color:#858d90;line-height:1.5}
+.artist-console-tabs{display:flex;gap:6px;border-bottom:1px solid var(--line);padding-bottom:10px;margin:0 0 22px;overflow-x:auto}
+.artist-console-tabs button{white-space:nowrap;padding:11px 15px;color:#9da4a6;background:transparent;border:1px solid transparent;font-size:10px}
+.artist-console-tabs button.active{color:var(--paper);border-color:#565e61;background:#222629}
+.artist-console-overview{display:grid;gap:16px}
+.artist-console-welcome{display:flex;justify-content:space-between;align-items:flex-end;gap:34px;min-height:260px;background:radial-gradient(circle at 85% 5%,rgba(184,139,105,.13),transparent 34%),linear-gradient(135deg,#1b1e21,#131517)}
+.artist-console-welcome h2{font-size:clamp(30px,4vw,48px);letter-spacing:-.065em;line-height:1.02;margin:15px 0}
+.artist-console-welcome p{max-width:500px;color:#aeb4b5;font-size:12px;line-height:1.8}
+.artist-console-actions{display:grid;min-width:190px;gap:14px}
+.artist-console-actions a{color:var(--silver);font-size:10px;text-align:center}
+.artist-console-section-heading{display:flex;justify-content:space-between;align-items:flex-end;gap:18px;margin-bottom:15px}
+.artist-console-section-heading h2{font-size:25px;letter-spacing:-.05em;margin:7px 0 0}
+.artist-console-section-heading>button{background:transparent;border:1px solid var(--line);color:var(--silver);padding:9px 12px;font-size:10px}
+.artist-console-post-row{display:flex;justify-content:space-between;align-items:center;gap:18px;border-top:1px solid rgba(255,255,255,.07);padding:16px 0}
+.artist-console-post-row>div:first-child{display:grid;gap:5px;min-width:0}
+.artist-console-post-row>div:first-child span{font-size:8px;color:var(--copper);letter-spacing:.1em;text-transform:uppercase}
+.artist-console-post-row strong{font-size:13px;overflow-wrap:anywhere}
+.artist-console-post-row small{font-size:9px;color:#858d90}
+.artist-console-mini-metrics{display:flex;gap:13px;flex-shrink:0;color:#c0c5c5;font-size:10px}
+.artist-console-publish{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(230px,.7fr);gap:16px;align-items:start}
+.artist-console-form-card h2{font-size:30px;letter-spacing:-.06em;margin:12px 0 8px}
+.artist-console-form-card>p{font-size:12px;color:#a5acad;line-height:1.7;margin:0 0 22px}
+.artist-console-form-card form{display:grid;gap:16px}
+.artist-console-file{padding:15px;border:1px dashed #596165;background:#101315;display:grid;gap:10px}
+.artist-console-file input{padding:0;border:0;background:transparent;font-size:11px}
+.artist-console-file span{color:#a2aaac;font-size:10px;line-height:1.6;overflow-wrap:anywhere}
+.artist-console-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+.artist-console-event-fields{display:grid;gap:14px;padding:18px;background:#141719;border:1px solid #4a4039}
+.artist-console-publish-aside{display:grid;gap:14px}
+.artist-console-publish-aside h3{font-size:22px;letter-spacing:-.05em;line-height:1.1;margin:14px 0}
+.artist-console-publish-aside p,.artist-console-publish-aside li{color:#a8afb0;font-size:11px;line-height:1.8}
+.artist-console-publish-aside ul{padding-left:16px;margin:14px 0 0}
+.artist-console-analytics{padding:28px}
+.artist-console-stats-inner{margin:20px 0}
+.artist-console-post-detail{padding:19px 0}
+.artist-console-message{position:sticky;bottom:14px;z-index:3;padding:13px 16px;background:#252b2c;border:1px solid #626d70;color:#e0e4e4;font-size:12px}
+.artist-console-footer{display:flex;justify-content:space-between;gap:15px;border-top:1px solid var(--line);padding-top:20px;margin-top:48px;color:#81888a;font-size:9px;letter-spacing:.1em}
+.artist-console-footer a{color:var(--silver)}
+.community-view-sentinel{display:block;width:100%;height:1px;pointer-events:none}
+.community-content-label{display:inline-block;margin-top:20px;color:var(--copper);font-size:9px;letter-spacing:.16em;text-transform:uppercase}
+.community-post-title{font-size:22px;letter-spacing:-.045em;margin:9px 0;color:var(--paper)}
+.community-event-meta{color:#b4babc;font-size:11px;line-height:1.7;margin:12px 0}
+.community-ticket-price{color:#e2c2a7;font-size:12px;font-weight:700;margin:12px 0 6px}
+.community-ticket-link{display:inline-flex;align-items:center;min-height:38px;background:var(--paper);color:#151719;padding:0 14px;margin:7px 0;font-size:10px;font-weight:700}
+.community-post-views{font-size:10px;color:#858d90;padding:8px 10px}
+.community-post-author-actions{margin-left:auto;display:flex;gap:7px;flex-wrap:wrap}
+.community-post-author-actions .community-follow{margin-left:0}
+.community-account-bar>div{display:flex;gap:8px;flex-wrap:wrap}
+.community-messages{margin:24px 0;padding:22px;background:#191c1f;border:1px solid var(--line)}
+.community-messages-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:17px}
+.community-messages-heading h2{font-size:26px;letter-spacing:-.05em;margin:6px 0}
+.community-messages-heading button{background:transparent;color:var(--silver);border:1px solid var(--line);padding:9px 13px}
+.community-messages-layout{display:grid;grid-template-columns:minmax(220px,.72fr) minmax(0,1.6fr);border:1px solid var(--line);min-height:350px}
+.community-inbox-list{padding:16px;border-right:1px solid var(--line)}
+.community-inbox-list h3{font-size:12px;margin:0 0 12px;color:#c6cbcc}
+.community-inbox-item{display:grid;gap:5px;width:100%;text-align:left;padding:12px 10px;background:transparent;color:var(--paper);border:0;border-top:1px solid rgba(255,255,255,.07)}
+.community-inbox-item.active{background:#272c2e}
+.community-inbox-item strong{font-size:11px}
+.community-inbox-item span{font-size:10px;color:#949c9e;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.community-inbox-item small{font-size:9px;color:var(--copper)}
+.community-thread{min-width:0;display:flex;flex-direction:column;min-height:350px}
+.community-thread-heading{display:grid;gap:4px;padding:14px 17px;border-bottom:1px solid var(--line)}
+.community-thread-heading strong{font-size:12px}
+.community-thread-heading span{font-size:9px;color:#91999b}
+.community-thread-empty{display:grid;place-items:center;flex:1;color:#899194;font-size:11px;padding:30px;text-align:center}
+.community-thread-messages{display:flex;flex-direction:column;gap:10px;flex:1;max-height:370px;overflow:auto;padding:17px}
+.community-bubble{align-self:flex-start;max-width:82%;padding:10px 13px;background:#252a2d;border:1px solid #373e41}
+.community-bubble.mine{align-self:flex-end;background:#35302b;border-color:#705944}
+.community-bubble p{margin:0;color:#e0e3e3;font-size:11px;line-height:1.7;white-space:pre-wrap;overflow-wrap:anywhere}
+.community-bubble small{display:block;margin-top:6px;color:#90999b;font-size:8px}
+.community-thread-form{display:flex;gap:8px;padding:12px;border-top:1px solid var(--line)}
+.community-thread-form input{flex:1;min-width:0;background:#0f1113;color:var(--paper);border:1px solid #3a4245;padding:12px;font-size:11px}
+.community-thread-form button{background:var(--paper);color:#151719;border:0;padding:0 15px;font-size:10px;font-weight:700}
+
+@media(max-width:760px){
+  .artist-console{width:calc(100% - 28px)}
+  .artist-console-hero{align-items:flex-start;flex-direction:column;padding:36px 0 25px}
+  .artist-console-hero-actions{justify-items:start;display:flex;align-items:center;flex-wrap:wrap}
+  .artist-console-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .artist-console-welcome{align-items:flex-start;flex-direction:column;padding:23px}
+  .artist-console-actions{width:100%}
+  .artist-console-publish{grid-template-columns:1fr}
+  .artist-console-analytics{padding:20px}
+  .community-messages-layout{grid-template-columns:1fr}
+  .community-inbox-list{border-right:0;border-bottom:1px solid var(--line);max-height:220px;overflow:auto}
+}
+@media(max-width:520px){
+  .artist-console-top{align-items:flex-start;flex-direction:column;padding:14px 0}
+  .artist-console-nav{gap:15px}
+  .artist-console-stats{gap:8px}
+  .artist-console-stats article{padding:14px}
+  .artist-console-form-grid{grid-template-columns:1fr}
+  .artist-console-post-row{align-items:flex-start;flex-direction:column}
+  .artist-console-mini-metrics{width:100%;flex-wrap:wrap}
+  .artist-console-footer{flex-direction:column}
+  .community-messages{padding:14px}
+  .community-account-bar>div{width:100%}
+  .community-account-bar>div button{width:100%}
+  .community-post-author-actions{margin-left:0}
+}
