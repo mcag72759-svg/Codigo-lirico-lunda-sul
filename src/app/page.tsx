@@ -37,6 +37,7 @@ export default function HomePage() {
           <a href="#sobre">A plataforma</a>
           <a href="#areas">Explorar</a>
           <a href="#oportunidades">Oportunidades</a>
+          <Link href="/parcerias">Parcerias</Link>
         </nav>
         <div className="header-account-links"><Link className="header-cta" href="/artistas/entrar">Entrar <span aria-hidden="true">↗</span></Link><Link className="header-register" href="/artistas/cadastro">Criar conta</Link></div>
       </header>
