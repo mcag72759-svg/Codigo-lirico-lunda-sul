@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
-type PendingPost={id:string;body:string;mediaUrl:string;mediaType:string;visibility:string;createdAt:string;authorId:string;artist:string;municipality:string};
+type PendingPost={id:string;title:string;contentType:string;body:string;mediaUrl:string;mediaType:string;visibility:string;location:string;organizer:string;eventStartsAt:string|null;ticketPrice:string;ticketUrl:string;scheduledAt:string|null;createdAt:string;authorId:string;artist:string;municipality:string};
 type Report={id:number;reporterId:string;targetType:string;targetId:string;reason:string;status:string;createdAt:string;reporter:string};
 
 export default function CommunityModerationPage(){
@@ -51,7 +51,7 @@ export default function CommunityModerationPage(){
       <section className="admin-publication-list">
         <div className="admin-list-heading"><h2>Publicações por aprovar</h2><span>{posts.length} pendentes</span></div>
         {posts.length===0?<p className="admin-security-note">Não há publicações pendentes.</p>:posts.map(post=><article className="admin-publication-item community-moderation-item" key={post.id}>
-          <div><span>{post.visibility==="followers"?"SÓ SEGUIDORES":"PÚBLICO"} · {post.municipality}</span><h3>{post.artist}</h3>{post.body&&<p>{post.body}</p>}{post.mediaUrl&&<a className="download-link" href={post.mediaUrl} target="_blank" rel="noreferrer">Pré-visualizar anexo ↗</a>}</div>
+          <div><span>{post.contentType.toUpperCase()} · {post.visibility==="followers"?"SÓ SEGUIDORES":"PÚBLICO"} · {post.municipality}</span><h3>{post.title||post.artist}</h3><p>Por {post.artist}</p>{post.body&&<p>{post.body}</p>}{post.eventStartsAt&&<p>{new Date(post.eventStartsAt).toLocaleString("pt-AO")} · {post.location} · {post.organizer}</p>}{post.ticketPrice&&<p>Bilhete: {post.ticketPrice}</p>}{post.scheduledAt&&<p>Agendamento: {new Date(post.scheduledAt).toLocaleString("pt-AO")}</p>}{post.ticketUrl&&<a className="download-link" href={post.ticketUrl} target="_blank" rel="noreferrer">Ver ligação de bilhetes ↗</a>}{post.mediaUrl&&<a className="download-link" href={post.mediaUrl} target="_blank" rel="noreferrer">Pré-visualizar anexo ↗</a>}</div>
           <div className="admin-item-actions"><button className="admin-edit" type="button" disabled={busy} onClick={()=>decide("post",post.id,"approved")}>Aprovar</button><button className="admin-delete" type="button" disabled={busy} onClick={()=>decide("post",post.id,"rejected")}>Rejeitar</button></div>
         </article>)}
       </section>

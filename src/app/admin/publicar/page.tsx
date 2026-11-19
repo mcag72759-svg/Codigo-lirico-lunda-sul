@@ -9,13 +9,21 @@ type AdminUser = { displayName:string; email:string; role:string };
 type Publication = {
   id:string; type:string; title:string; author:string; category:string; description:string;
   externalUrl:string; mediaUrl:string; imageUrl:string; featured:boolean; status:string; createdAt:string;
+  scheduledAt:string|null;eventStartsAt:string|null;location:string;organizer:string;ticketPrice:string;ticketUrl:string;
 };
+type PlatformPostMetric={id:string;title:string;contentType:string;status:string;createdAt:string;author:string;likes:number;comments:number;views:number};
+type PlatformAnalytics={artists:number;publications:number;pending:number;likes:number;comments:number;views:number;follows:number;topPosts:PlatformPostMetric[]};
 type ArtistMedia = {
   id:string; title:string; description:string; kind:string; genre:string; mediaUrl:string;
   mimeType:string; sizeBytes:number; downloadAllowed:boolean; status:string; createdAt:string; artist:string;
 };
-const types = [["article","Artigo / notícia"],["music","Música"],["video","Vídeo"],["announcement","Comunicado"],["poetry","Poesia / literatura"],["event","Evento"],["opportunity","Oportunidade"],["gallery","Galeria"]];
+type ArtistApplication = {
+  id:string; stageName:string; fullName:string; municipality:string; genre:string; email:string;
+  phone:string; bio:string; link:string; status:string; createdAt:string;
+};
+const types = [["article","Artigo / notícia"],["music","Música"],["video","Vídeo"],["announcement","Anúncio"],["poetry","Poesia / literatura"],["event","Evento"],["opportunity","Oportunidade"],["gallery","Galeria"],["organization","Organização"],["partnership","Parceria"],["ticket","Bilheteira"]];
 const statusLabels:Record<string,string>={pending:"A aguardar revisão",approved:"Aprovado e público",rejected:"Não aprovado"};
+const applicationStatusLabels:Record<string,string>={pending:"Candidatura pendente",approved:"Aprovada · pode activar a conta",rejected:"Não aprovada"};
 
 export default function AdminPublishPage() {
   const [admin,setAdmin]=useState<AdminUser|null>(null);
@@ -25,21 +33,29 @@ export default function AdminPublishPage() {
   const [message,setMessage]=useState("");
   const [items,setItems]=useState<Publication[]>([]);
   const [artistMediaItems,setArtistMediaItems]=useState<ArtistMedia[]>([]);
+  const [artistApplications,setArtistApplications]=useState<ArtistApplication[]>([]);
+  const [analytics,setAnalytics]=useState<PlatformAnalytics|null>(null);
   const [editing,setEditing]=useState<Publication|null>(null);
   const [featured,setFeatured]=useState(false);
   const [mediaFile,setMediaFile]=useState<File|null>(null);
   const [coverFile,setCoverFile]=useState<File|null>(null);
 
   const loadItems=useCallback(async()=>{
-    const [contentResponse,mediaResponse]=await Promise.all([
+    const [contentResponse,mediaResponse,applicationsResponse,analyticsResponse]=await Promise.all([
       fetch("/api/admin/content",{credentials:"same-origin",cache:"no-store"}),
-      fetch("/api/admin/artist-media",{credentials:"same-origin",cache:"no-store"})
+      fetch("/api/admin/artist-media",{credentials:"same-origin",cache:"no-store"}),
+      fetch("/api/admin/artist-applications",{credentials:"same-origin",cache:"no-store"}),
+      fetch("/api/admin/analytics",{credentials:"same-origin",cache:"no-store"})
     ]);
-    const [contentData,mediaData]=await Promise.all([contentResponse.json(),mediaResponse.json()]);
+    const [contentData,mediaData,applicationsData,analyticsData]=await Promise.all([contentResponse.json(),mediaResponse.json(),applicationsResponse.json(),analyticsResponse.json()]);
     if(!contentResponse.ok)throw new Error(contentData.error??"Não foi possível carregar as publicações.");
     if(!mediaResponse.ok)throw new Error(mediaData.error??"Não foi possível carregar os envios dos artistas.");
+    if(!applicationsResponse.ok)throw new Error(applicationsData.error??"Não foi possível carregar as candidaturas.");
+    if(!analyticsResponse.ok)throw new Error(analyticsData.error??"Não foi possível carregar as estatísticas da plataforma.");
     setItems(contentData.items??[]);
     setArtistMediaItems(mediaData.items??[]);
+    setArtistApplications(applicationsData.items??[]);
+    setAnalytics(analyticsData);
   },[]);
 
   useEffect(()=>{
@@ -66,7 +82,7 @@ export default function AdminPublishPage() {
   async function logout(){
     setBusy(true);
     try{await fetch("/api/admin/session",{method:"DELETE",credentials:"same-origin"});}
-    finally{setAdmin(null);setItems([]);setArtistMediaItems([]);setEditing(null);setBusy(false);setMessage("Sessão terminada.");}
+    finally{setAdmin(null);setItems([]);setArtistMediaItems([]);setArtistApplications([]);setAnalytics(null);setEditing(null);setBusy(false);setMessage("Sessão terminada.");}
   }
 
   async function sendFile(file:File,kind:"media"|"cover"){
@@ -93,7 +109,10 @@ export default function AdminPublishPage() {
         type:String(data.get("type")),title:String(data.get("title")),
         artist:String(data.get("artist")??""),genre:String(data.get("genre")??""),
         description:String(data.get("description")),link:String(data.get("link")??""),
-        mediaUrl,imageUrl,featured,status:String(data.get("status")??"published")
+        mediaUrl,imageUrl,featured,status:String(data.get("status")??"published"),
+        scheduledAt:data.get("scheduledAt")?new Date(String(data.get("scheduledAt"))).toISOString():"",eventStartsAt:data.get("eventStartsAt")?new Date(String(data.get("eventStartsAt"))).toISOString():"",
+        location:String(data.get("location")??""),organizer:String(data.get("organizer")??""),
+        ticketPrice:String(data.get("ticketPrice")??""),ticketUrl:String(data.get("ticketUrl")??"")
       };
       const r=await fetch("/api/admin/content",{method:editing?"PUT":"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
       const j=await r.json();if(!r.ok)throw new Error(j.error??"Não foi possível guardar a publicação.");
@@ -131,6 +150,16 @@ export default function AdminPublishPage() {
     finally{setBusy(false);}
   }
 
+  async function reviewArtistApplication(id:string,status:"approved"|"rejected"){
+    setBusy(true);setMessage(status==="approved"?"A aprovar candidatura…":"A rejeitar candidatura…");
+    try{
+      const r=await fetch("/api/admin/artist-applications",{method:"PATCH",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,status})});
+      const j=await r.json();if(!r.ok)throw new Error(j.error??"Não foi possível rever a candidatura.");
+      await loadItems();setMessage(status==="approved"?"Candidatura aprovada. O artista já pode activar a sua conta com o código que recebeu.":"Candidatura rejeitada.");
+    }catch(e){setMessage(e instanceof Error?e.message:"Erro ao rever a candidatura.");}
+    finally{setBusy(false);}
+  }
+
   return <main className="admin-publish-page">
     <Link className="admin-back-link" href="/">← Voltar ao Código Lírico</Link>
     <div className="admin-publish-heading"><span className="section-kicker">CENTRO DE ADMINISTRAÇÃO / CONTEÚDO</span><h1>Gestão do <em>Código Lírico.</em></h1><p>Publica a partir do teu dispositivo, actualiza conteúdos e revê os trabalhos enviados pelos artistas.</p></div>
@@ -142,6 +171,14 @@ export default function AdminPublishPage() {
       <p className="admin-security-note">Acesso reservado a administradores autorizados.</p>
     </form>:<>
       <div className="admin-session-bar"><div><strong>{admin.displayName}</strong><span>{admin.email} · {admin.role}</span></div><Link className="admin-edit" href="/admin/comunidade">Moderação da comunidade ↗</Link><button className="button button-light" type="button" onClick={logout} disabled={busy}>Terminar sessão</button></div>
+      {analytics&&<section className="admin-engagement-overview"><div><span>ARTISTAS</span><strong>{analytics.artists}</strong></div><div><span>PUBLICAÇÕES</span><strong>{analytics.publications}</strong></div><div><span>GOSTOS</span><strong>{analytics.likes}</strong></div><div><span>COMENTÁRIOS</span><strong>{analytics.comments}</strong></div><div><span>VISUALIZAÇÕES ÚNICAS</span><strong>{analytics.views}</strong></div><div><span>SEGUIMENTOS</span><strong>{analytics.follows}</strong></div><div><span>POR APROVAR</span><strong>{analytics.pending}</strong></div></section>}
+      {analytics&&<section className="admin-publication-list admin-engagement-list">
+        <div className="admin-list-heading"><h2>Desempenho das publicações dos artistas</h2><span>Últimas {analytics.topPosts.length}</span></div>
+        {analytics.topPosts.length===0?<p className="admin-security-note">Ainda não há publicações de artistas para analisar.</p>:analytics.topPosts.map(post=><article className="admin-publication-item" key={post.id}>
+          <div><span>{post.contentType.toUpperCase()} · {post.status.toUpperCase()}</span><h3>{post.title||"Publicação sem título"}</h3><p>Por {post.author} · {new Date(post.createdAt).toLocaleDateString("pt-AO")}</p></div>
+          <div className="admin-engagement-metrics"><span>♡ {post.likes}</span><span>◌ {post.comments}</span><span>◉ {post.views}</span></div>
+        </article>)}
+      </section>}
       <form key={editing?.id??"new-publication"} className="admin-publish-form" onSubmit={submit}>
         <h2>{editing?"Editar publicação":"Nova publicação"}</h2>
         <div className="admin-form-row">
@@ -161,7 +198,19 @@ export default function AdminPublishPage() {
           <label>Link externo (opcional)<input name="link" type="url" placeholder="https://…" defaultValue={editing?.externalUrl??""}/></label>
           <label>Link de áudio/vídeo já alojado (opcional)<input name="mediaUrl" type="url" placeholder="https://…" defaultValue={editing?.mediaUrl??""}/></label>
         </div>
-        <label>Estado<select name="status" defaultValue={editing?.status??"published"}><option value="published">Publicado</option><option value="draft">Rascunho</option><option value="archived">Arquivado</option></select></label>
+        <div className="admin-form-row">
+          <label>Data e hora do evento<input name="eventStartsAt" type="datetime-local" defaultValue={editing?.eventStartsAt?new Date(editing.eventStartsAt).toISOString().slice(0,16):""}/></label>
+          <label>Local / recinto<input name="location" maxLength={180} placeholder="Cidade ou espaço" defaultValue={editing?.location??""}/></label>
+        </div>
+        <div className="admin-form-row">
+          <label>Organização responsável<input name="organizer" maxLength={160} defaultValue={editing?.organizer??""} placeholder="Organizador / parceiro"/></label>
+          <label>Preço do bilhete<input name="ticketPrice" maxLength={60} defaultValue={editing?.ticketPrice??""} placeholder="Ex.: 2.500 Kz ou Gratuito"/></label>
+        </div>
+        <label>Ligação para bilhetes / vendas (HTTPS)<input name="ticketUrl" type="url" placeholder="https://…" defaultValue={editing?.ticketUrl??""}/></label>
+        <div className="admin-form-row">
+          <label>Agendar publicação<input name="scheduledAt" type="datetime-local" defaultValue={editing?.scheduledAt?new Date(editing.scheduledAt).toISOString().slice(0,16):""}/></label>
+          <label>Estado<select name="status" defaultValue={editing?.status??"published"}><option value="published">Publicar agora</option><option value="scheduled">Agendar publicação</option><option value="draft">Rascunho</option><option value="archived">Arquivado</option></select></label>
+        </div>
         <label className="admin-featured-option"><input type="checkbox" checked={featured} onChange={e=>setFeatured(e.target.checked)}/> Destacar esta publicação na plataforma</label>
         <div className="admin-form-actions"><button className="button button-light admin-submit" type="submit" disabled={busy}>{busy?"A processar…":editing?"Guardar alterações ↗":"Publicar conteúdo ↗"}</button>{editing&&<button className="admin-cancel" type="button" onClick={()=>{setEditing(null);setFeatured(false);setMediaFile(null);setCoverFile(null);setMessage("Edição cancelada.")}}>Cancelar edição</button>}</div>
         <p className="admin-security-note">Os ficheiros são enviados para armazenamento na nuvem. Os links de download ficam disponíveis aos visitantes conforme o estado publicado.</p>
@@ -170,7 +219,7 @@ export default function AdminPublishPage() {
       <section className="admin-publication-list">
         <div className="admin-list-heading"><h2>Publicações recentes</h2><span>{items.length} registos</span></div>
         {items.length===0?<p className="admin-security-note">Ainda não existem publicações nesta área.</p>:items.map(item=><article className="admin-publication-item" key={item.id}>
-          <div><span>{item.type.toUpperCase()} · {item.status.toUpperCase()}</span><h3>{item.title}</h3><p>{item.author} · {item.category}</p></div>
+          <div><span>{item.type.toUpperCase()} · {item.status.toUpperCase()}</span><h3>{item.title}</h3><p>{item.author} · {item.category}</p>{item.status==="scheduled"&&item.scheduledAt&&<p>Agendado para {new Date(item.scheduledAt).toLocaleString("pt-AO")}</p>}{item.ticketPrice&&<p>Bilhete: {item.ticketPrice}</p>}</div>
           <div className="admin-item-actions"><button className="admin-edit" type="button" onClick={()=>startEditing(item)} disabled={busy}>Editar</button><button className="admin-delete" type="button" onClick={()=>removePublication(item.id)} disabled={busy}>Apagar</button></div>
         </article>)}
       </section>
@@ -181,6 +230,22 @@ export default function AdminPublishPage() {
           <div><span>{item.kind.toUpperCase()} · {statusLabels[item.status]??item.status}</span><h3>{item.title}</h3><p>{item.artist} · {item.genre} · {(item.sizeBytes/1048576).toFixed(1)} MB</p><a className="download-link" href={item.mediaUrl} target="_blank" rel="noreferrer">Pré-visualizar ficheiro ↗</a></div>
           {item.status==="pending"&&<div className="admin-item-actions"><button className="admin-edit" type="button" onClick={()=>reviewArtistFile(item.id,"approved")} disabled={busy}>Aprovar</button><button className="admin-delete" type="button" onClick={()=>reviewArtistFile(item.id,"rejected")} disabled={busy}>Rejeitar</button></div>}
         </article>)}
+      </section>
+
+      <section className="admin-publication-list">
+        <div className="admin-list-heading"><h2>Candidaturas de artistas</h2><span>{artistApplications.length} registos</span></div>
+        {artistApplications.length===0?<p className="admin-security-note">Ainda não existem candidaturas. Os novos artistas podem candidatar-se em /artista/cadastro.</p>:artistApplications.map(item=><article className="admin-publication-item" key={item.id}>
+          <div>
+            <span>{applicationStatusLabels[item.status]??item.status} · {new Date(item.createdAt).toLocaleDateString("pt-AO")}</span>
+            <h3>{item.stageName}</h3>
+            <p>{item.fullName} · {item.municipality} · {item.genre}</p>
+            <p>{item.email} · {item.phone}</p>
+            <p>{item.bio}</p>
+            {item.link&&<a className="download-link" href={item.link} target="_blank" rel="noreferrer">Ver portefólio ↗</a>}
+          </div>
+          {item.status==="pending"&&<div className="admin-item-actions"><button className="admin-edit" type="button" onClick={()=>reviewArtistApplication(item.id,"approved")} disabled={busy}>Aprovar</button><button className="admin-delete" type="button" onClick={()=>reviewArtistApplication(item.id,"rejected")} disabled={busy}>Rejeitar</button></div>}
+        </article>)}
+        <p className="admin-security-note">A aprovação não cria uma palavra-passe. O artista activa a própria conta com o código privado recebido ao candidatar-se.</p>
       </section>
     </>}
     {message&&<p className="admin-form-message" role="status">{message}</p>}

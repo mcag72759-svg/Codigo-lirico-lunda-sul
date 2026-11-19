@@ -215,6 +215,12 @@ export const platformPublications = pgTable("platform_publications", {
   imageUrl: text("image_url").notNull(),
   featured: boolean("featured").notNull(),
   status: text("status").notNull(),
+  scheduledAt: timestamptz("scheduled_at"),
+  eventStartsAt: timestamptz("event_starts_at"),
+  location: text("location").notNull().default(""),
+  organizer: text("organizer").notNull().default(""),
+  ticketPrice: text("ticket_price").notNull().default(""),
+  ticketUrl: text("ticket_url").notNull().default(""),
   createdBy: text("created_by"),
   createdAt: timestamptz("created_at").notNull(),
   updatedAt: timestamptz("updated_at").notNull(),
@@ -233,7 +239,15 @@ export const platformAdminLoginAttempts = pgTable("platform_admin_login_attempts
 export const communityPosts = pgTable("community_posts", {
   id: text("id").primaryKey(),
   authorId: text("author_id").notNull(),
+  title: text("title").notNull().default(""),
+  contentType: text("content_type").notNull().default("general"),
   body: text("body").notNull(),
+  location: text("location").notNull().default(""),
+  organizer: text("organizer").notNull().default(""),
+  eventStartsAt: timestamptz("event_starts_at"),
+  ticketPrice: text("ticket_price").notNull().default(""),
+  ticketUrl: text("ticket_url").notNull().default(""),
+  scheduledAt: timestamptz("scheduled_at"),
   mediaUrl: text("media_url").notNull(),
   mediaType: text("media_type").notNull(),
   visibility: text("visibility").notNull(),
@@ -243,6 +257,29 @@ export const communityPosts = pgTable("community_posts", {
 }, (table) => ({
   statusCreatedIdx: index("community_posts_status_created_idx").on(table.status, table.createdAt.desc()),
   authorCreatedIdx: index("community_posts_author_created_idx").on(table.authorId, table.createdAt.desc()),
+}));
+
+export const communityConversations = pgTable("community_conversations", {
+  id: text("id").primaryKey(),
+  createdBy: text("created_by").notNull(),
+  createdAt: timestamptz("created_at").notNull(),
+  lastMessageAt: timestamptz("last_message_at").notNull(),
+});
+
+export const communityConversationMembers = pgTable("community_conversation_members", {
+  conversationId: text("conversation_id").notNull(),
+  memberId: text("member_id").notNull(),
+  joinedAt: timestamptz("joined_at").notNull(),
+});
+
+export const communityPostViews = pgTable("community_post_views", {
+  id: bigserial("id", { mode: "number" }).primaryKey(),
+  postId: text("post_id").notNull(),
+  visitorHash: text("visitor_hash").notNull(),
+  createdAt: timestamptz("created_at").notNull(),
+}, (table) => ({
+  postVisitorUnique: uniqueIndex("community_post_views_visitor_key").on(table.postId, table.visitorHash),
+  postCreatedIdx: index("community_post_views_post_created_idx").on(table.postId, table.createdAt.desc()),
 }));
 
 export const communityComments = pgTable("community_comments", {
