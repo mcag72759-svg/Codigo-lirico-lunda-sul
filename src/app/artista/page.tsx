@@ -94,6 +94,7 @@ export default function ArtistStudioPage() {
       <label>Palavra-passe<input type="password" autoComplete="current-password" value={password} onChange={e=>setPassword(e.target.value)} minLength={8} maxLength={128} required/></label>
       <button className="button button-light admin-submit" type="submit" disabled={busy}>{busy?"A verificar…":"Entrar no estúdio ↗"}</button>
       <p className="admin-security-note">O acesso é reservado a contas de artista aprovadas e já registadas na plataforma.</p>
+      <p className="artist-register-prompt">Ainda não tens conta? <Link href="/artista/cadastro">Candidatar-me como artista ↗</Link></p>
     </form>:<>
       <div className="admin-session-bar"><div><strong>{artist.stageName}</strong><span>{artist.email} · {artist.municipality} · {artist.genre}</span></div><button className="button button-light" type="button" onClick={logout} disabled={busy}>Terminar sessão</button></div>
       <form className="admin-publish-form" onSubmit={submit}>
