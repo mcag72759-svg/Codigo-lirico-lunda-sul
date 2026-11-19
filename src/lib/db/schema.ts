@@ -270,10 +270,7 @@ export const communityConversationMembers = pgTable("community_conversation_memb
   conversationId: text("conversation_id").notNull(),
   memberId: text("member_id").notNull(),
   joinedAt: timestamptz("joined_at").notNull(),
-}, (table) => ({
-  memberPairUnique: uniqueIndex("community_conversation_members_pkey").on(table.conversationId, table.memberId),
-  memberIdx: index("community_conversation_members_member_idx").on(table.memberId),
-}));
+});
 
 export const communityPostViews = pgTable("community_post_views", {
   id: bigserial("id", { mode: "number" }).primaryKey(),
