@@ -38,7 +38,7 @@ export default function HomePage() {
           <a href="#areas">Explorar</a>
           <a href="#oportunidades">Oportunidades</a>
         </nav>
-        <a className="header-cta" href="#areas">Entrar na comunidade <span aria-hidden="true">↗</span></a>
+        <div className="header-account-links"><Link className="header-cta" href="/artistas/entrar">Entrar <span aria-hidden="true">↗</span></Link><Link className="header-register" href="/artistas/cadastro">Criar conta</Link></div>
       </header>
 
       <section className="hero" aria-labelledby="hero-title">
