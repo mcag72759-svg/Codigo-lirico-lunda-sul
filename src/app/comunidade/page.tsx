@@ -39,10 +39,17 @@ export default function CommunityPage(){
 
   useEffect(()=>{
     let active=true;
-    refresh().catch(error=>{if(active)setMessage(error instanceof Error?error.message:"Erro ao carregar a comunidade.")})
+    fetch("/api/community/feed",{credentials:"same-origin",cache:"no-store"})
+      .then(response=>response.json().then(data=>({response,data})))
+      .then(({response,data})=>{
+        if(!active)return;
+        if(!response.ok)throw new Error(data.error??"Não foi possível carregar a comunidade.");
+        setArtist(data.artist??null);setPosts(data.posts??[]);
+      })
+      .catch(error=>{if(active)setMessage(error instanceof Error?error.message:"Erro ao carregar a comunidade.")})
       .finally(()=>{if(active)setLoaded(true)});
     return()=>{active=false};
-  },[refresh]);
+  },[]);
 
   async function login(event:FormEvent<HTMLFormElement>){
     event.preventDefault();setBusy(true);setMessage("");

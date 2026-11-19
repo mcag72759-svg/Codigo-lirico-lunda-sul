@@ -20,7 +20,19 @@ export default function CommunityModerationPage(){
     if(!response.ok)throw new Error(data.error??"Inicia sessão no painel administrativo.");
     setPosts(data.posts??[]);setReports(data.reports??[]);setAuthorized(true);
   },[]);
-  useEffect(()=>{let active=true;load().catch(error=>{if(active)setMessage(error instanceof Error?error.message:"Acesso não autorizado.")}).finally(()=>{if(active)setLoaded(true)});return()=>{active=false}},[load]);
+  useEffect(()=>{
+    let active=true;
+    fetch("/api/admin/community-moderation",{credentials:"same-origin",cache:"no-store"})
+      .then(response=>response.json().then(data=>({response,data})))
+      .then(({response,data})=>{
+        if(!active)return;
+        if(!response.ok)throw new Error(data.error??"Inicia sessão no painel administrativo.");
+        setPosts(data.posts??[]);setReports(data.reports??[]);setAuthorized(true);
+      })
+      .catch(error=>{if(active)setMessage(error instanceof Error?error.message:"Acesso não autorizado.")})
+      .finally(()=>{if(active)setLoaded(true)});
+    return()=>{active=false};
+  },[]);
 
   async function decide(type:"post"|"report",id:string,status:string){
     setBusy(true);
