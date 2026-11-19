@@ -53,3 +53,25 @@ npm run build
 ## Estado
 
 A estrutura inicial está em desenvolvimento na branch `codex/platform-foundation`. Ainda não é uma versão de produção nem representa a conclusão das funcionalidades sociais, de autenticação ou de administração.
+
+
+## Publicações administrativas
+
+- A área de composição está em `/admin/publicar`.
+- A API administrativa é `POST /api/admin/content`; verifica uma sessão ativa em `platform_admin_sessions`, confirma que a conta está ativa e exige a permissão `content.publish` (ou `*`).
+- O token de sessão é procurado no cookie `cl_admin_session`; o valor guardado na base de dados deve ser o SHA-256 desse token. O cookie deve ser emitido pelo futuro fluxo de autenticação como `HttpOnly`, `Secure` em produção e `SameSite=Lax` ou mais restritivo.
+- Cada publicação é gravada em `published_content` e gera um registo em `platform_audit_log`.
+- Os últimos 12 conteúdos são apresentados na página inicial através de `GET /api/content`.
+- Tipos suportados: artigo, música, vídeo, comunicado, poesia, evento, oportunidade e galeria. Os links externos só aceitam HTTPS.
+
+**Limite actual:** a interface e a verificação de sessão da publicação estão preparadas, mas o fluxo de início de sessão que emite o cookie `cl_admin_session` ainda tem de ser integrado com o método de autenticação e os hashes já existentes. Não criar uma nova palavra-passe nem substituir o mecanismo actual sem validar primeiro os dados existentes.
+
+## Redes sociais do criador
+
+Configurar os endereços oficiais no ambiente da Vercel (e localmente, se necessário):
+- `NEXT_PUBLIC_SOCIAL_FACEBOOK_URL`
+- `NEXT_PUBLIC_SOCIAL_X_URL`
+- `NEXT_PUBLIC_SOCIAL_INSTAGRAM_URL`
+- `NEXT_PUBLIC_SOCIAL_YOUTUBE_URL`
+
+Sem um endereço configurado, a rede aparece identificada como pendente em vez de apontar para um perfil inventado.
