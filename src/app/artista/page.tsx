@@ -90,6 +90,7 @@ export default function ArtistStudioPage(){
 
   async function publish(event:FormEvent<HTMLFormElement>){
     event.preventDefault();
+    const form=event.currentTarget;
     if(!title.trim()){setMessage("Indica o título do conteúdo.");return;}
     if(!body.trim()&&!file){setMessage("Escreve uma descrição ou selecciona um ficheiro.");return;}
     if(category==="music"&&(!file||!file.type.startsWith("audio/"))){setMessage("Para publicar música, selecciona um ficheiro de áudio.");return;}
@@ -116,7 +117,7 @@ export default function ArtistStudioPage(){
       if(!response.ok)throw new Error(data.error??"Não foi possível enviar a publicação.");
       setTitle("");setBody("");setFile(null);setVisibility("public");setScheduledAt("");
       setLocation("");setOrganizer("");setEventStartsAt("");setTicketPrice("");setTicketUrl("");
-      (event.currentTarget as HTMLFormElement).reset();
+      form.reset();
       await loadAnalytics();
       setTab("analytics");
       setMessage(data.scheduledAt?"Conteúdo enviado para aprovação com data de agendamento.":"Conteúdo enviado para aprovação.");
