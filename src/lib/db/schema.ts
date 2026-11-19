@@ -153,6 +153,23 @@ export const communityReactions = pgTable("community_reactions", {
   contentIdx: index("community_reactions_content_idx").on(table.contentId),
 }));
 
+
+export const communityConversations = pgTable("community_conversations", {
+  id: text("id").primaryKey(),
+  createdBy: text("created_by").notNull(),
+  createdAt: timestamptz("created_at").notNull(),
+  lastMessageAt: timestamptz("last_message_at").notNull(),
+});
+
+export const communityConversationMembers = pgTable("community_conversation_members", {
+  conversationId: text("conversation_id").notNull(),
+  memberId: text("member_id").notNull(),
+  joinedAt: timestamptz("joined_at").notNull(),
+}, (table) => ({
+  memberConversationUnique: uniqueIndex("community_conversation_members_key").on(table.conversationId, table.memberId),
+  memberIdx: index("community_conversation_members_member_idx").on(table.memberId),
+}));
+
 export const communityMessages = pgTable("community_messages", {
   id: bigserial("id", { mode: "number" }).primaryKey(),
   conversationId: text("conversation_id").notNull(),
