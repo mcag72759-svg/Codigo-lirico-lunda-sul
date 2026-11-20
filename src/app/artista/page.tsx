@@ -143,6 +143,7 @@ export default function ArtistStudioPage(){
         <button className="artist-console-primary" type="submit" disabled={busy}>{busy?"A verificar…":"Entrar no estúdio ↗"}</button>
         <p className="admin-security-note">O acesso está reservado a artistas aprovados.</p>
         <p className="artist-register-prompt">Ainda não tens conta? <Link href="/artista/cadastro">Candidatar-me como artista ↗</Link></p>
+        <p className="artist-register-prompt"><Link href="/artista/cadastro#ativacao-antiga">Já tens candidatura aprovada e precisas de activar ou recuperar o acesso? ↗</Link></p>
       </form>
     </section>:<>
       <header className="artist-console-hero">
