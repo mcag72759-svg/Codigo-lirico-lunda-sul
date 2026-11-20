@@ -24,8 +24,8 @@ type ArtistApplication = {
 };
 const types = [["text","Texto simples"],["article","Artigo / notícia"],["news","Notícia"],["music","Música"],["video","Vídeo"],["podcast","Podcast"],["announcement","Anúncio"],["poetry","Poesia / literatura"],["event","Evento"],["opportunity","Oportunidade"],["gallery","Galeria"],["organization","Organização"],["partnership","Parceria"],["ticket","Bilheteira"],["document","Documento / PDF"],["course","Formação"],["livestream","Transmissão em directo"],["press_release","Comunicado"],["call_for_artists","Chamada para artistas"],["resource","Recurso"]];
 const statusLabels:Record<string,string>={pending:"A aguardar revisão",approved:"Aprovado e público",rejected:"Não aprovado"};
-const applicationStatusLabels:Record<string,string>={pending:"Candidatura pendente",approved:"Candidatura aprovada",rejected:"Estado antigo / inactivo"};
-const permissionOptions=[["content.view","Consultar publicações"],["content.publish","Criar e publicar conteúdo"],["content.manage","Editar e remover conteúdo"],["artists.view","Consultar contas de artistas"],["artists.review","Aprovar candidaturas e rever ficheiros"],["artists.manage","Gerir acessos de artistas"],["community.moderate","Moderar, retirar e remover publicações"],["analytics.view","Consultar estatísticas"],["administrators.manage","Gerir administradores e permissões"]];
+const applicationStatusLabels:Record<string,string>={pending:"Candidatura pendente",approved:"Conta activa",rejected:"Candidatura rejeitada",suspended:"Conta suspensa"};
+const permissionOptions=[["content.view","Consultar publicações"],["content.publish","Criar e publicar conteúdo"],["content.manage","Editar e remover conteúdo"],["artists.view","Consultar contas de artistas"],["artists.review","Aprovar e rejeitar candidaturas; suspender ou reactivar artistas"],["artists.manage","Remover definitivamente contas de artistas"],["community.moderate","Moderar, retirar e remover publicações"],["analytics.view","Consultar estatísticas"],["administrators.manage","Gerir administradores e permissões"]];
 const rolePresets:Record<string,string[]>={publisher:["content.view","content.publish"],editor:["content.view","content.publish","content.manage"],artist_moderator:["artists.view","artists.review","artists.manage"],community_moderator:["community.moderate"],analyst:["analytics.view"],platform_manager:["content.view","content.publish","content.manage","artists.view","artists.review","artists.manage","community.moderate","analytics.view"]};
 const roleLabels:Record<string,string>={publisher:"Publicador",editor:"Editor de conteúdo",artist_moderator:"Gestor de artistas",community_moderator:"Moderador da comunidade",analyst:"Analista",platform_manager:"Gestor da plataforma"};
 
@@ -159,13 +159,42 @@ export default function AdminPublishPage() {
     finally{setBusy(false);}
   }
 
-  async function reviewArtistApplication(id:string){
-    setBusy(true);setMessage("A aprovar candidatura…");
+  async function reviewArtistApplication(id:string,status:"approved"|"rejected"|"suspended"|"pending"){
+    const item=artistApplications.find(candidate=>candidate.id===id);
+    const name=item?.stageName??"este artista";
+    const prompts:Record<typeof status,string>={
+      approved:"Aprovar ou reactivar o acesso de "+name+"?",
+      rejected:"Rejeitar a candidatura de "+name+"? O candidato não poderá entrar no estúdio.",
+      suspended:"Suspender o acesso de "+name+"? As sessões activas serão terminadas.",
+      pending:"Reabrir a candidatura de "+name+" para nova revisão?"
+    };
+    if(status!=="approved"&&!window.confirm(prompts[status]))return;
+    setBusy(true);
+    setMessage(status==="approved"?"A aprovar/reactivar…":status==="rejected"?"A rejeitar candidatura…":status==="suspended"?"A suspender acesso…":"A reabrir candidatura…");
     try{
-      const r=await fetch("/api/admin/artist-applications",{method:"PATCH",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,status:"approved"})});
-      const j=await r.json();if(!r.ok)throw new Error(j.error??"Não foi possível aprovar a candidatura.");
-      await loadItems();setMessage("Candidatura aprovada. O artista já pode entrar com o e-mail e a palavra-passe escolhidos no cadastro.");
-    }catch(e){setMessage(e instanceof Error?e.message:"Erro ao aprovar a candidatura.");}
+      const r=await fetch("/api/admin/artist-applications",{method:"PATCH",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,status})});
+      const j=await r.json();if(!r.ok)throw new Error(j.error??"Não foi possível actualizar o estado.");
+      setActivationCredential(null);
+      await loadItems();
+      const labels:Record<typeof status,string>={approved:"Acesso aprovado/reactivado.",rejected:"Candidatura rejeitada.",suspended:"Conta suspensa e sessões terminadas.",pending:"Candidatura reaberta para revisão."};
+      setMessage(labels[status]);
+    }catch(e){setMessage(e instanceof Error?e.message:"Erro ao actualizar a conta.");}
+    finally{setBusy(false);}
+  }
+
+  async function removeArtistApplication(item:ArtistApplication){
+    const confirmed=window.confirm(
+      "APAGAR DEFINITIVAMENTE "+item.stageName+"? Esta acção remove a conta, os ficheiros, as publicações na comunidade, comentários, reacções, seguidores e conversas associados. Não pode ser anulada."
+    );
+    if(!confirmed)return;
+    setBusy(true);setMessage("A remover a conta e os dados associados…");
+    try{
+      const r=await fetch("/api/admin/artist-applications",{method:"DELETE",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:item.id})});
+      const j=await r.json();if(!r.ok)throw new Error(j.error??"Não foi possível remover a conta.");
+      setActivationCredential(null);
+      await loadItems();
+      setMessage("Conta e dados associados removidos.");
+    }catch(e){setMessage(e instanceof Error?e.message:"Erro ao remover a conta.");}
     finally{setBusy(false);}
   }
 
@@ -307,13 +336,24 @@ export default function AdminPublishPage() {
             {item.link&&<a className="download-link" href={item.link} target="_blank" rel="noreferrer">Ver portefólio ↗</a>}
           </div>
           <div className="admin-item-actions">
-            {item.status==="pending"&&(admin.permissions.includes("*")||admin.permissions.includes("artists.review")||admin.permissions.includes("artists.manage")||admin.permissions.includes("content.manage"))&&<button className="admin-edit" type="button" onClick={()=>reviewArtistApplication(item.id)} disabled={busy}>Aprovar candidatura</button>}
-            {item.status==="approved"&&(admin.permissions.includes("*")||admin.permissions.includes("artists.review")||admin.permissions.includes("artists.manage")||admin.permissions.includes("content.manage"))&&<button className="admin-edit" type="button" onClick={()=>issueArtistActivationCode(item)} disabled={busy}>{item.hasAccount?"Gerar código de recuperação":"Gerar código de activação"}</button>}
-            {item.status==="approved"&&item.hasAccount&&<span className="admin-security-note">Conta com credenciais guardadas</span>}
+            {item.status==="pending"&&(admin.permissions.includes("*")||admin.permissions.includes("artists.review")||admin.permissions.includes("artists.manage")||admin.permissions.includes("content.manage"))&&<>
+              <button className="admin-edit" type="button" onClick={()=>reviewArtistApplication(item.id,"approved")} disabled={busy}>Aprovar</button>
+              <button className="admin-delete" type="button" onClick={()=>reviewArtistApplication(item.id,"rejected")} disabled={busy}>Rejeitar</button>
+            </>}
+            {item.status==="approved"&&(admin.permissions.includes("*")||admin.permissions.includes("artists.review")||admin.permissions.includes("artists.manage")||admin.permissions.includes("content.manage"))&&<>
+              <button className="admin-edit" type="button" onClick={()=>issueArtistActivationCode(item)} disabled={busy}>{item.hasAccount?"Gerar código de recuperação":"Gerar código de activação"}</button>
+              <button className="admin-delete" type="button" onClick={()=>reviewArtistApplication(item.id,"suspended")} disabled={busy}>Suspender acesso</button>
+            </>}
+            {item.status==="suspended"&&(admin.permissions.includes("*")||admin.permissions.includes("artists.review")||admin.permissions.includes("artists.manage")||admin.permissions.includes("content.manage"))&&
+              <button className="admin-edit" type="button" onClick={()=>reviewArtistApplication(item.id,"approved")} disabled={busy}>Reactivar acesso</button>}
+            {item.status==="rejected"&&(admin.permissions.includes("*")||admin.permissions.includes("artists.review")||admin.permissions.includes("artists.manage")||admin.permissions.includes("content.manage"))&&
+              <button className="admin-edit" type="button" onClick={()=>reviewArtistApplication(item.id,"pending")} disabled={busy}>Reabrir candidatura</button>}
+            {(admin.permissions.includes("*")||admin.permissions.includes("artists.manage"))&&
+              <button className="admin-delete" type="button" onClick={()=>removeArtistApplication(item)} disabled={busy}>Apagar definitivamente</button>}
           </div>
           {activationCredential?.applicationId===item.id&&<div className="admin-created-secret"><strong>Código privado · {activationCredential.stageName}</strong><p>{activationCredential.email}</p><code>{activationCredential.code}</code><button className="admin-edit" type="button" onClick={copyActivationCode}>Copiar código</button><p>Entrega este código ao artista. Ele deve abrir o estúdio, ir a “Activar / actualizar acesso” e criar uma nova palavra-passe. O código deixa de funcionar depois da utilização.</p></div>}
         </article>)}
-        <p className="admin-security-note">O artista escolhe a palavra-passe durante a candidatura. Depois da aprovação, entra com o mesmo e-mail e a mesma palavra-passe. Para contas antigas ou palavras-passe esquecidas, emite um código privado de activação/recuperação nesta área.</p>
+        <p className="admin-security-note">Usa as acções de cada registo: aprovar/rejeitar candidaturas, suspender/reactivar contas e, com permissão de gestão, apagar definitivamente uma conta e os dados associados. A emissão de códigos permite activar contas antigas ou recuperar o acesso.</p>
       </section>}
 
       {(admin.permissions.includes("*")||admin.permissions.includes("administrators.manage"))&&<section className="admin-publication-list">
