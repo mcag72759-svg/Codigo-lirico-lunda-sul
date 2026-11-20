@@ -5,7 +5,8 @@ import { upload } from "@vercel/blob/client";
 import { useCallback, useEffect, useState } from "react";
 import type { FormEvent } from "react";
 
-type AdminUser = { displayName:string; email:string; role:string };
+type AdminUser = { id:string; displayName:string; email:string; role:string; permissions:string[] };
+type AdminRecord = { id:string; displayName:string; email:string; role:string; permissions:string[]; active:boolean; createdAt:string };
 type Publication = {
   id:string; type:string; title:string; author:string; category:string; description:string;
   externalUrl:string; mediaUrl:string; imageUrl:string; featured:boolean; status:string; createdAt:string;
@@ -21,9 +22,12 @@ type ArtistApplication = {
   id:string; stageName:string; fullName:string; municipality:string; genre:string; email:string;
   phone:string; bio:string; link:string; status:string; createdAt:string;
 };
-const types = [["article","Artigo / notícia"],["music","Música"],["video","Vídeo"],["announcement","Anúncio"],["poetry","Poesia / literatura"],["event","Evento"],["opportunity","Oportunidade"],["gallery","Galeria"],["organization","Organização"],["partnership","Parceria"],["ticket","Bilheteira"]];
+const types = [["text","Texto simples"],["article","Artigo / notícia"],["news","Notícia"],["music","Música"],["video","Vídeo"],["podcast","Podcast"],["announcement","Anúncio"],["poetry","Poesia / literatura"],["event","Evento"],["opportunity","Oportunidade"],["gallery","Galeria"],["organization","Organização"],["partnership","Parceria"],["ticket","Bilheteira"],["document","Documento / PDF"],["course","Formação"],["livestream","Transmissão em directo"],["press_release","Comunicado"],["call_for_artists","Chamada para artistas"],["resource","Recurso"]];
 const statusLabels:Record<string,string>={pending:"A aguardar revisão",approved:"Aprovado e público",rejected:"Não aprovado"};
-const applicationStatusLabels:Record<string,string>={pending:"Candidatura pendente",approved:"Aprovada · pode activar a conta",rejected:"Não aprovada"};
+const applicationStatusLabels:Record<string,string>={pending:"Candidatura pendente",approved:"Conta activa",rejected:"Conta suspensa / rejeitada"};
+const permissionOptions=[["content.view","Consultar publicações"],["content.publish","Criar e publicar conteúdo"],["content.manage","Editar e remover conteúdo"],["artists.view","Consultar contas de artistas"],["artists.review","Aprovar e rejeitar artistas e ficheiros"],["artists.manage","Suspender e remover contas"],["community.moderate","Moderar, retirar e remover publicações"],["analytics.view","Consultar estatísticas"],["administrators.manage","Gerir administradores e permissões"]];
+const rolePresets:Record<string,string[]>={publisher:["content.view","content.publish"],editor:["content.view","content.publish","content.manage"],artist_moderator:["artists.view","artists.review","artists.manage"],community_moderator:["community.moderate"],analyst:["analytics.view"],platform_manager:["content.view","content.publish","content.manage","artists.view","artists.review","artists.manage","community.moderate","analytics.view"]};
+const roleLabels:Record<string,string>={publisher:"Publicador",editor:"Editor de conteúdo",artist_moderator:"Gestor de artistas",community_moderator:"Moderador da comunidade",analyst:"Analista",platform_manager:"Gestor da plataforma"};
 
 export default function AdminPublishPage() {
   const [admin,setAdmin]=useState<AdminUser|null>(null);
@@ -34,6 +38,12 @@ export default function AdminPublishPage() {
   const [items,setItems]=useState<Publication[]>([]);
   const [artistMediaItems,setArtistMediaItems]=useState<ArtistMedia[]>([]);
   const [artistApplications,setArtistApplications]=useState<ArtistApplication[]>([]);
+  const [administrators,setAdministrators]=useState<AdminRecord[]>([]);
+  const [newAdminName,setNewAdminName]=useState("");
+  const [newAdminEmail,setNewAdminEmail]=useState("");
+  const [newAdminRole,setNewAdminRole]=useState("publisher");
+  const [newAdminPermissions,setNewAdminPermissions]=useState<string[]>(rolePresets.publisher);
+  const [createdAdminSecret,setCreatedAdminSecret]=useState<{email:string;password:string}|null>(null);
   const [analytics,setAnalytics]=useState<PlatformAnalytics|null>(null);
   const [editing,setEditing]=useState<Publication|null>(null);
   const [featured,setFeatured]=useState(false);
@@ -41,21 +51,19 @@ export default function AdminPublishPage() {
   const [coverFile,setCoverFile]=useState<File|null>(null);
 
   const loadItems=useCallback(async()=>{
-    const [contentResponse,mediaResponse,applicationsResponse,analyticsResponse]=await Promise.all([
+    const [contentResponse,mediaResponse,applicationsResponse,analyticsResponse,administratorsResponse]=await Promise.all([
       fetch("/api/admin/content",{credentials:"same-origin",cache:"no-store"}),
       fetch("/api/admin/artist-media",{credentials:"same-origin",cache:"no-store"}),
       fetch("/api/admin/artist-applications",{credentials:"same-origin",cache:"no-store"}),
-      fetch("/api/admin/analytics",{credentials:"same-origin",cache:"no-store"})
+      fetch("/api/admin/analytics",{credentials:"same-origin",cache:"no-store"}),
+      fetch("/api/admin/administrators",{credentials:"same-origin",cache:"no-store"})
     ]);
     const [contentData,mediaData,applicationsData,analyticsData]=await Promise.all([contentResponse.json(),mediaResponse.json(),applicationsResponse.json(),analyticsResponse.json()]);
-    if(!contentResponse.ok)throw new Error(contentData.error??"Não foi possível carregar as publicações.");
-    if(!mediaResponse.ok)throw new Error(mediaData.error??"Não foi possível carregar os envios dos artistas.");
-    if(!applicationsResponse.ok)throw new Error(applicationsData.error??"Não foi possível carregar as candidaturas.");
-    if(!analyticsResponse.ok)throw new Error(analyticsData.error??"Não foi possível carregar as estatísticas da plataforma.");
-    setItems(contentData.items??[]);
-    setArtistMediaItems(mediaData.items??[]);
-    setArtistApplications(applicationsData.items??[]);
-    setAnalytics(analyticsData);
+    setItems(contentResponse.ok?(contentData.items??[]):[]);
+    setArtistMediaItems(mediaResponse.ok?(mediaData.items??[]):[]);
+    setArtistApplications(applicationsResponse.ok?(applicationsData.items??[]):[]);
+    setAnalytics(analyticsResponse.ok?analyticsData:null);
+    setAdministrators(administratorsResponse.ok?(await administratorsResponse.json()).items??[]:[]);
   },[]);
 
   useEffect(()=>{
@@ -82,13 +90,13 @@ export default function AdminPublishPage() {
   async function logout(){
     setBusy(true);
     try{await fetch("/api/admin/session",{method:"DELETE",credentials:"same-origin"});}
-    finally{setAdmin(null);setItems([]);setArtistMediaItems([]);setArtistApplications([]);setAnalytics(null);setEditing(null);setBusy(false);setMessage("Sessão terminada.");}
+    finally{setAdmin(null);setItems([]);setArtistMediaItems([]);setArtistApplications([]);setAdministrators([]);setAnalytics(null);setEditing(null);setCreatedAdminSecret(null);setBusy(false);setMessage("Sessão terminada.");}
   }
 
   async function sendFile(file:File,kind:"media"|"cover"){
     const max=200*1024*1024;
     if(file.size>max)throw new Error("O ficheiro excede o limite de 200 MB.");
-    const allowed=kind==="cover"?["image/jpeg","image/png","image/webp"]:["audio/mpeg","audio/mp4","audio/wav","audio/x-wav","video/mp4","video/webm","application/pdf","image/jpeg","image/png","image/webp"];
+    const allowed=kind==="cover"?["image/jpeg","image/png","image/webp"]:["audio/mpeg","audio/mp4","audio/wav","audio/x-wav","video/mp4","video/webm","application/pdf","application/msword","application/vnd.openxmlformats-officedocument.wordprocessingml.document","application/vnd.ms-powerpoint","application/vnd.openxmlformats-officedocument.presentationml.presentation","application/vnd.ms-excel","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet","image/jpeg","image/png","image/webp"];
     if(!allowed.includes(file.type))throw new Error("Formato não permitido para este campo.");
     const blob=await upload(file.name,file,{access:"public",handleUploadUrl:"/api/admin/upload"});
     return blob.url;
@@ -150,13 +158,57 @@ export default function AdminPublishPage() {
     finally{setBusy(false);}
   }
 
-  async function reviewArtistApplication(id:string,status:"approved"|"rejected"){
-    setBusy(true);setMessage(status==="approved"?"A aprovar candidatura…":"A rejeitar candidatura…");
+  async function reviewArtistApplication(id:string,status:"approved"|"rejected"|"pending"){
+    setBusy(true);setMessage(status==="approved"?"A aprovar conta…":status==="pending"?"A devolver para revisão…":"A suspender conta…");
     try{
       const r=await fetch("/api/admin/artist-applications",{method:"PATCH",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,status})});
       const j=await r.json();if(!r.ok)throw new Error(j.error??"Não foi possível rever a candidatura.");
-      await loadItems();setMessage(status==="approved"?"Candidatura aprovada. O artista já pode activar a sua conta com o código que recebeu.":"Candidatura rejeitada.");
+      await loadItems();setMessage(status==="approved"?"Conta aprovada. O artista pode entrar novamente.":status==="pending"?"Conta devolvida para revisão.":"Conta suspensa; as sessões existentes foram invalidadas.");
     }catch(e){setMessage(e instanceof Error?e.message:"Erro ao rever a candidatura.");}
+    finally{setBusy(false);}
+  }
+
+  async function removeArtistApplication(item:ArtistApplication){
+    if(!window.confirm("Remover permanentemente a conta de "+item.stageName+"? Os ficheiros, publicações, comentários e conversas ligados a esta conta também serão removidos."))return;
+    setBusy(true);
+    try{
+      const r=await fetch("/api/admin/artist-applications",{method:"DELETE",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:item.id})});
+      const j=await r.json();if(!r.ok)throw new Error(j.error??"Não foi possível remover a conta.");
+      await loadItems();setMessage("Conta de artista removida.");
+    }catch(e){setMessage(e instanceof Error?e.message:"Erro ao remover a conta.");}
+    finally{setBusy(false);}
+  }
+
+  async function removeArtistMedia(id:string){
+    if(!window.confirm("Remover permanentemente este ficheiro enviado pelo artista?"))return;
+    setBusy(true);
+    try{
+      const r=await fetch("/api/admin/artist-media",{method:"DELETE",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({id})});
+      const j=await r.json();if(!r.ok)throw new Error(j.error??"Não foi possível remover o ficheiro.");
+      await loadItems();setMessage("Ficheiro removido.");
+    }catch(e){setMessage(e instanceof Error?e.message:"Erro ao remover o ficheiro.");}
+    finally{setBusy(false);}
+  }
+
+  async function createAdministrator(event:FormEvent<HTMLFormElement>){
+    event.preventDefault();setBusy(true);setMessage("");setCreatedAdminSecret(null);
+    try{
+      const r=await fetch("/api/admin/administrators",{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({displayName:newAdminName,email:newAdminEmail,role:newAdminRole,permissions:newAdminPermissions})});
+      const j=await r.json();if(!r.ok)throw new Error(j.error??"Não foi possível criar o administrador.");
+      setCreatedAdminSecret({email:j.administrator.email,password:j.temporaryPassword});
+      setNewAdminName("");setNewAdminEmail("");
+      await loadItems();setMessage("Administrador criado. Guarda a palavra-passe temporária apresentada abaixo.");
+    }catch(e){setMessage(e instanceof Error?e.message:"Erro ao criar administrador.");}
+    finally{setBusy(false);}
+  }
+
+  async function updateAdministrator(item:AdminRecord,patch:{role?:string;permissions?:string[];active?:boolean}){
+    setBusy(true);
+    try{
+      const r=await fetch("/api/admin/administrators",{method:"PATCH",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:item.id,...patch})});
+      const j=await r.json();if(!r.ok)throw new Error(j.error??"Não foi possível actualizar o administrador.");
+      await loadItems();setMessage("Permissões do administrador actualizadas.");
+    }catch(e){setMessage(e instanceof Error?e.message:"Erro ao actualizar administrador.");}
     finally{setBusy(false);}
   }
 
@@ -170,20 +222,20 @@ export default function AdminPublishPage() {
       <button className="button button-light admin-submit" type="submit" disabled={busy}>{busy?"A verificar…":"Entrar no painel ↗"}</button>
       <p className="admin-security-note">Acesso reservado a administradores autorizados.</p>
     </form>:<>
-      <div className="admin-session-bar"><div><strong>{admin.displayName}</strong><span>{admin.email} · {admin.role}</span></div><Link className="admin-edit" href="/admin/comunidade">Moderação da comunidade ↗</Link><button className="button button-light" type="button" onClick={logout} disabled={busy}>Terminar sessão</button></div>
-      {analytics&&<section className="admin-engagement-overview"><div><span>ARTISTAS</span><strong>{analytics.artists}</strong></div><div><span>PUBLICAÇÕES</span><strong>{analytics.publications}</strong></div><div><span>GOSTOS</span><strong>{analytics.likes}</strong></div><div><span>COMENTÁRIOS</span><strong>{analytics.comments}</strong></div><div><span>VISUALIZAÇÕES ÚNICAS</span><strong>{analytics.views}</strong></div><div><span>SEGUIMENTOS</span><strong>{analytics.follows}</strong></div><div><span>POR APROVAR</span><strong>{analytics.pending}</strong></div></section>}
-      {analytics&&<section className="admin-publication-list admin-engagement-list">
+      <div className="admin-session-bar"><div><strong>{admin.displayName}</strong><span>{admin.email} · {admin.role}</span></div>{(admin.permissions.includes("*")||admin.permissions.includes("community.moderate")||admin.permissions.includes("content.manage"))&&<Link className="admin-edit" href="/admin/comunidade">Moderação da comunidade ↗</Link>}<button className="button button-light" type="button" onClick={logout} disabled={busy}>Terminar sessão</button></div>
+      {analytics&&(admin.permissions.includes("*")||admin.permissions.includes("analytics.view")||admin.permissions.includes("content.manage"))&&<section className="admin-engagement-overview"><div><span>ARTISTAS</span><strong>{analytics.artists}</strong></div><div><span>PUBLICAÇÕES</span><strong>{analytics.publications}</strong></div><div><span>GOSTOS</span><strong>{analytics.likes}</strong></div><div><span>COMENTÁRIOS</span><strong>{analytics.comments}</strong></div><div><span>VISUALIZAÇÕES ÚNICAS</span><strong>{analytics.views}</strong></div><div><span>SEGUIMENTOS</span><strong>{analytics.follows}</strong></div><div><span>POR APROVAR</span><strong>{analytics.pending}</strong></div></section>}
+      {analytics&&(admin.permissions.includes("*")||admin.permissions.includes("analytics.view")||admin.permissions.includes("content.manage"))&&<section className="admin-publication-list admin-engagement-list">
         <div className="admin-list-heading"><h2>Desempenho das publicações dos artistas</h2><span>Últimas {analytics.topPosts.length}</span></div>
         {analytics.topPosts.length===0?<p className="admin-security-note">Ainda não há publicações de artistas para analisar.</p>:analytics.topPosts.map(post=><article className="admin-publication-item" key={post.id}>
           <div><span>{post.contentType.toUpperCase()} · {post.status.toUpperCase()}</span><h3>{post.title||"Publicação sem título"}</h3><p>Por {post.author} · {new Date(post.createdAt).toLocaleDateString("pt-AO")}</p></div>
           <div className="admin-engagement-metrics"><span>♡ {post.likes}</span><span>◌ {post.comments}</span><span>◉ {post.views}</span></div>
         </article>)}
       </section>}
-      <form key={editing?.id??"new-publication"} className="admin-publish-form" onSubmit={submit}>
+      {(admin.permissions.includes("*")||admin.permissions.includes("content.publish")||admin.permissions.includes("content.manage"))&&<form key={editing?.id??"new-publication"} className="admin-publish-form" onSubmit={submit}>
         <h2>{editing?"Editar publicação":"Nova publicação"}</h2>
         <div className="admin-form-row">
           <label>Tipo de publicação<select name="type" defaultValue={editing?.type??"announcement"} required>{types.map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></label>
-          <label>Título<input name="title" maxLength={160} placeholder="Título da publicação" defaultValue={editing?.title??""} required/></label>
+          <label>Título<input name="title" maxLength={160} placeholder="Título da publicação (opcional em texto simples)" defaultValue={editing?.title??""}/></label>
         </div>
         <div className="admin-form-row">
           <label>Autor / artista<input name="artist" maxLength={120} placeholder="Nome do autor ou artista" defaultValue={editing?.author??""}/></label>
@@ -191,7 +243,7 @@ export default function AdminPublishPage() {
         </div>
         <label>Descrição / conteúdo<textarea name="description" maxLength={12000} rows={7} placeholder="Escreve aqui o conteúdo da publicação…" defaultValue={editing?.description??""} required/></label>
         <div className="admin-form-row">
-          <label>Ficheiro principal (áudio, vídeo, PDF ou imagem)<div className="admin-file-field"><input type="file" accept="audio/*,video/mp4,video/webm,application/pdf,image/jpeg,image/png,image/webp" onChange={e=>setMediaFile(e.target.files?.[0]??null)}/><span className="admin-file-note">{mediaFile?mediaFile.name:editing?.mediaUrl?"Ficheiro actual mantido se não escolheres outro.":"Escolhe um ficheiro guardado no teu telemóvel ou computador."} · Máximo 200 MB</span></div></label>
+          <label>Ficheiro principal (áudio, vídeo, imagem ou documento)<div className="admin-file-field"><input type="file" accept="audio/*,video/mp4,video/webm,application/pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,image/jpeg,image/png,image/webp" onChange={e=>setMediaFile(e.target.files?.[0]??null)}/><span className="admin-file-note">{mediaFile?mediaFile.name:editing?.mediaUrl?"Ficheiro actual mantido se não escolheres outro.":"Escolhe um ficheiro do telemóvel: áudio, vídeo, imagem, PDF ou documento."} · Máximo 200 MB</span></div></label>
           <label>Capa / imagem<div className="admin-file-field"><input type="file" accept="image/jpeg,image/png,image/webp" onChange={e=>setCoverFile(e.target.files?.[0]??null)}/><span className="admin-file-note">{coverFile?coverFile.name:editing?.imageUrl?"Capa actual mantida se não escolheres outra.":"Selecciona uma imagem JPG, PNG ou WebP."}</span></div></label>
         </div>
         <div className="admin-form-row">
@@ -214,26 +266,26 @@ export default function AdminPublishPage() {
         <label className="admin-featured-option"><input type="checkbox" checked={featured} onChange={e=>setFeatured(e.target.checked)}/> Destacar esta publicação na plataforma</label>
         <div className="admin-form-actions"><button className="button button-light admin-submit" type="submit" disabled={busy}>{busy?"A processar…":editing?"Guardar alterações ↗":"Publicar conteúdo ↗"}</button>{editing&&<button className="admin-cancel" type="button" onClick={()=>{setEditing(null);setFeatured(false);setMediaFile(null);setCoverFile(null);setMessage("Edição cancelada.")}}>Cancelar edição</button>}</div>
         <p className="admin-security-note">Os ficheiros são enviados para armazenamento na nuvem. Os links de download ficam disponíveis aos visitantes conforme o estado publicado.</p>
-      </form>
+      </form>}
 
-      <section className="admin-publication-list">
+      {(admin.permissions.includes("*")||admin.permissions.includes("content.view")||admin.permissions.includes("content.manage"))&&<section className="admin-publication-list">
         <div className="admin-list-heading"><h2>Publicações recentes</h2><span>{items.length} registos</span></div>
         {items.length===0?<p className="admin-security-note">Ainda não existem publicações nesta área.</p>:items.map(item=><article className="admin-publication-item" key={item.id}>
           <div><span>{item.type.toUpperCase()} · {item.status.toUpperCase()}</span><h3>{item.title}</h3><p>{item.author} · {item.category}</p>{item.status==="scheduled"&&item.scheduledAt&&<p>Agendado para {new Date(item.scheduledAt).toLocaleString("pt-AO")}</p>}{item.ticketPrice&&<p>Bilhete: {item.ticketPrice}</p>}</div>
-          <div className="admin-item-actions"><button className="admin-edit" type="button" onClick={()=>startEditing(item)} disabled={busy}>Editar</button><button className="admin-delete" type="button" onClick={()=>removePublication(item.id)} disabled={busy}>Apagar</button></div>
+          <div className="admin-item-actions">{(admin.permissions.includes("*")||admin.permissions.includes("content.manage"))&&<><button className="admin-edit" type="button" onClick={()=>startEditing(item)} disabled={busy}>Editar</button><button className="admin-delete" type="button" onClick={()=>removePublication(item.id)} disabled={busy}>Apagar</button></>}</div>
         </article>)}
-      </section>
+      </section>}
 
-      <section className="admin-publication-list">
+      {(admin.permissions.includes("*")||admin.permissions.includes("artists.view")||admin.permissions.includes("artists.review")||admin.permissions.includes("artists.manage")||admin.permissions.includes("content.manage"))&&<section className="admin-publication-list">
         <div className="admin-list-heading"><h2>Ficheiros enviados pelos artistas</h2><span>{artistMediaItems.length} registos</span></div>
         {artistMediaItems.length===0?<p className="admin-security-note">Ainda não há ficheiros submetidos por artistas.</p>:artistMediaItems.map(item=><article className="admin-publication-item" key={item.id}>
           <div><span>{item.kind.toUpperCase()} · {statusLabels[item.status]??item.status}</span><h3>{item.title}</h3><p>{item.artist} · {item.genre} · {(item.sizeBytes/1048576).toFixed(1)} MB</p><a className="download-link" href={item.mediaUrl} target="_blank" rel="noreferrer">Pré-visualizar ficheiro ↗</a></div>
-          {item.status==="pending"&&<div className="admin-item-actions"><button className="admin-edit" type="button" onClick={()=>reviewArtistFile(item.id,"approved")} disabled={busy}>Aprovar</button><button className="admin-delete" type="button" onClick={()=>reviewArtistFile(item.id,"rejected")} disabled={busy}>Rejeitar</button></div>}
+          <div className="admin-item-actions">{(admin.permissions.includes("*")||admin.permissions.includes("artists.review")||admin.permissions.includes("artists.manage")||admin.permissions.includes("content.manage"))&&<>{item.status!=="approved"&&<button className="admin-edit" type="button" onClick={()=>reviewArtistFile(item.id,"approved")} disabled={busy}>Aprovar / restaurar</button>}{item.status==="approved"&&<button className="admin-delete" type="button" onClick={()=>reviewArtistFile(item.id,"rejected")} disabled={busy}>Retirar</button>}</>}{(admin.permissions.includes("*")||admin.permissions.includes("artists.manage")||admin.permissions.includes("content.manage"))&&<button className="admin-delete" type="button" onClick={()=>removeArtistMedia(item.id)} disabled={busy}>Apagar</button>}</div>
         </article>)}
-      </section>
+      </section>}
 
-      <section className="admin-publication-list">
-        <div className="admin-list-heading"><h2>Candidaturas de artistas</h2><span>{artistApplications.length} registos</span></div>
+      {(admin.permissions.includes("*")||admin.permissions.includes("artists.view")||admin.permissions.includes("artists.review")||admin.permissions.includes("artists.manage")||admin.permissions.includes("content.manage"))&&<section className="admin-publication-list">
+        <div className="admin-list-heading"><h2>Contas e candidaturas de artistas</h2><span>{artistApplications.length} registos</span></div>
         {artistApplications.length===0?<p className="admin-security-note">Ainda não existem candidaturas. Os novos artistas podem candidatar-se em /artista/cadastro.</p>:artistApplications.map(item=><article className="admin-publication-item" key={item.id}>
           <div>
             <span>{applicationStatusLabels[item.status]??item.status} · {new Date(item.createdAt).toLocaleDateString("pt-AO")}</span>
@@ -243,10 +295,24 @@ export default function AdminPublishPage() {
             <p>{item.bio}</p>
             {item.link&&<a className="download-link" href={item.link} target="_blank" rel="noreferrer">Ver portefólio ↗</a>}
           </div>
-          {item.status==="pending"&&<div className="admin-item-actions"><button className="admin-edit" type="button" onClick={()=>reviewArtistApplication(item.id,"approved")} disabled={busy}>Aprovar</button><button className="admin-delete" type="button" onClick={()=>reviewArtistApplication(item.id,"rejected")} disabled={busy}>Rejeitar</button></div>}
+          <div className="admin-item-actions">{(admin.permissions.includes("*")||admin.permissions.includes("artists.review")||admin.permissions.includes("artists.manage")||admin.permissions.includes("content.manage"))&&<>{item.status!=="approved"&&<button className="admin-edit" type="button" onClick={()=>reviewArtistApplication(item.id,"approved")} disabled={busy}>Aprovar / reactivar</button>}{item.status==="pending"&&<button className="admin-delete" type="button" onClick={()=>reviewArtistApplication(item.id,"rejected")} disabled={busy}>Rejeitar</button>}{item.status==="approved"&&<button className="admin-delete" type="button" onClick={()=>reviewArtistApplication(item.id,"rejected")} disabled={busy}>Suspender</button>}{item.status==="rejected"&&<button className="admin-edit" type="button" onClick={()=>reviewArtistApplication(item.id,"pending")} disabled={busy}>Devolver à revisão</button>}</>}{(admin.permissions.includes("*")||admin.permissions.includes("artists.manage")||admin.permissions.includes("content.manage"))&&<button className="admin-delete" type="button" onClick={()=>removeArtistApplication(item)} disabled={busy}>Remover conta</button>}</div>
         </article>)}
         <p className="admin-security-note">A aprovação não cria uma palavra-passe. O artista activa a própria conta com o código privado recebido ao candidatar-se.</p>
-      </section>
+      </section>}
+
+      {(admin.permissions.includes("*")||admin.permissions.includes("administrators.manage"))&&<section className="admin-publication-list">
+        <div className="admin-list-heading"><h2>Administradores e permissões</h2><span>{administrators.length} contas</span></div>
+        <p className="admin-security-note">Cria contas de equipa com permissões específicas. A palavra-passe temporária só aparece uma vez; entrega-a directamente à pessoa autorizada.</p>
+        <form className="admin-publish-form" onSubmit={createAdministrator}>
+          <h3>Novo administrador</h3>
+          <div className="admin-form-row"><label>Nome<input value={newAdminName} onChange={e=>setNewAdminName(e.target.value)} maxLength={100} required/></label><label>E-mail<input type="email" value={newAdminEmail} onChange={e=>setNewAdminEmail(e.target.value)} maxLength={254} required/></label></div>
+          <label>Função<select value={newAdminRole} onChange={e=>{setNewAdminRole(e.target.value);setNewAdminPermissions(rolePresets[e.target.value]??[])}}>{Object.entries(roleLabels).map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label>
+          <div><strong>Permissões específicas</strong><div className="admin-permission-grid">{permissionOptions.map(([value,label])=><label className="admin-permission-option" key={value}><input type="checkbox" checked={newAdminPermissions.includes(value)} onChange={e=>setNewAdminPermissions(current=>e.target.checked?[...current,value]:current.filter(item=>item!==value))}/><span>{label}</span></label>)}</div></div>
+          <button className="button button-light admin-submit" type="submit" disabled={busy||newAdminPermissions.length===0}>Criar conta administrativa ↗</button>
+        </form>
+        {createdAdminSecret&&<div className="admin-created-secret"><strong>Credenciais temporárias — guardar agora</strong><p>{createdAdminSecret.email}</p><code>{createdAdminSecret.password}</code><button className="admin-edit" type="button" onClick={()=>navigator.clipboard?.writeText(createdAdminSecret.password)}>Copiar palavra-passe</button></div>}
+        {administrators.map(item=><article className="admin-publication-item" key={item.id}><div><span>{item.active?"ACTIVO":"SUSPENSO"} · {roleLabels[item.role]??item.role}</span><h3>{item.displayName}</h3><p>{item.email}</p><div className="admin-account-permissions">{item.permissions.map(permission=><span key={permission}>{permission==="*"?"ACESSO TOTAL":permission}</span>)}</div></div><div className="admin-item-actions">{item.id!==admin.id&&!item.permissions.includes("*")&&<><select aria-label={"Função de "+item.displayName} value={item.role} onChange={e=>updateAdministrator(item,{role:e.target.value,permissions:rolePresets[e.target.value]??[]})}>{Object.entries(roleLabels).map(([value,label])=><option key={value} value={value}>{label}</option>)}</select><button className={item.active?"admin-delete":"admin-edit"} type="button" disabled={busy} onClick={()=>updateAdministrator(item,{active:!item.active})}>{item.active?"Suspender acesso":"Reactivar acesso"}</button></>}</div></article>)}
+      </section>}
     </>}
     {message&&<p className="admin-form-message" role="status">{message}</p>}
   </main>;

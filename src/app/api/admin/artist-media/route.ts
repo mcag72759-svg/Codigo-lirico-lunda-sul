@@ -3,14 +3,14 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { artistApplications, artistMedia, platformAuditLog } from "@/lib/db/schema";
 import { getAdminSession, requestOriginIsSame } from "@/lib/security/admin-session";
-import { hasPermission } from "@/lib/security/permissions";
+import { hasAnyPermission } from "@/lib/security/permissions";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   const admin = await getAdminSession();
-  if (!admin || !hasPermission(admin, "content.manage")) {
+  if (!admin || !hasAnyPermission(admin, ["artists.view", "artists.review", "artists.manage", "content.manage"])) {
     return NextResponse.json({ error: "Acesso administrativo necessário." }, { status: 401 });
   }
   const items = await db.select({
@@ -36,7 +36,7 @@ export async function GET() {
 export async function PATCH(request: Request) {
   if (!requestOriginIsSame(request)) return NextResponse.json({ error: "Origem não permitida." }, { status: 403 });
   const admin = await getAdminSession();
-  if (!admin || !hasPermission(admin, "content.manage")) {
+  if (!admin || !hasAnyPermission(admin, ["artists.review", "artists.manage", "content.manage"])) {
     return NextResponse.json({ error: "Não tens permissão para moderar ficheiros." }, { status: 403 });
   }
 
@@ -63,6 +63,27 @@ export async function PATCH(request: Request) {
     entityId: updated.id,
     details: { title: updated.title, applicationId: updated.applicationId },
     createdAt: now,
+  });
+  return NextResponse.json({ ok: true });
+}
+
+export async function DELETE(request: Request) {
+  if (!requestOriginIsSame(request)) return NextResponse.json({ error: "Origem não permitida." }, { status: 403 });
+  const admin = await getAdminSession();
+  if (!admin || !hasAnyPermission(admin, ["artists.manage", "content.manage"])) {
+    return NextResponse.json({ error: "Não tens permissão para remover ficheiros de artistas." }, { status: 403 });
+  }
+  let input: unknown;
+  try { input = await request.json(); } catch { return NextResponse.json({ error: "Pedido inválido." }, { status: 400 }); }
+  const id = input && typeof input === "object" && typeof (input as Record<string, unknown>).id === "string"
+    ? String((input as Record<string, unknown>).id).trim().slice(0, 80) : "";
+  if (!id) return NextResponse.json({ error: "Identificador de ficheiro inválido." }, { status: 400 });
+  const [removed] = await db.delete(artistMedia).where(eq(artistMedia.id, id))
+    .returning({ id: artistMedia.id, title: artistMedia.title });
+  if (!removed) return NextResponse.json({ error: "Ficheiro não encontrado." }, { status: 404 });
+  await db.insert(platformAuditLog).values({
+    actorAdminId: admin.id, action: "artist_media.delete", entityType: "artist_media",
+    entityId: id, details: { title: removed.title }, createdAt: new Date(),
   });
   return NextResponse.json({ ok: true });
 }

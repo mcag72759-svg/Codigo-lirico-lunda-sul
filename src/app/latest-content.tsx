@@ -16,7 +16,7 @@ type Publication = {
 type PublicComment = { id: string; body: string; createdAt: string; author: string; photoUrl: string };
 
 const labels: Record<string, string> = {article:"Artigo",music:"Música",video:"Vídeo",announcement:"Anúncio",poetry:"Poesia",event:"Evento",opportunity:"Oportunidade",gallery:"Galeria",podcast:"Podcast",organization:"Organização",partnership:"Parceria",ticket:"Bilheteira",general:"Partilha"};
-const filters = [["all","Tudo"],["music","Música"],["video","Vídeos"],["poetry","Poesia"],["event","Eventos"],["article","Artigos"],["partnership","Parcerias"],["organization","Organizações"],["opportunity","Oportunidades"],["announcement","Anúncios"],["gallery","Galeria"]];
+const filters = [["all","Tudo"],["text","Textos"],["music","Música"],["video","Vídeos"],["podcast","Podcasts"],["poetry","Poesia"],["document","Documentos"],["event","Eventos"],["article","Artigos"],["news","Notícias"],["opportunity","Oportunidades"],["announcement","Anúncios"],["gallery","Galeria"]];
 
 function mediaKind(url: string, type: string): "audio" | "video" | "other" {
   const path = url.split(/[?#]/, 1)[0].toLowerCase();

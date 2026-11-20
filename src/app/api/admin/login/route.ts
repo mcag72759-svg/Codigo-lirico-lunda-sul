@@ -85,6 +85,7 @@ export async function POST(request: Request) {
       active: platformAdmins.active,
       passwordSalt: platformAdmins.passwordSalt,
       passwordHash: platformAdmins.passwordHash,
+      permissions: platformAdmins.permissions,
     })
     .from(platformAdmins)
     .where(eq(platformAdmins.email, email))
@@ -111,7 +112,7 @@ export async function POST(request: Request) {
 
   const response = NextResponse.json({
     ok: true,
-    admin: { displayName: admin.displayName, email: admin.email, role: admin.role },
+    admin: { displayName: admin.displayName, email: admin.email, role: admin.role, id: admin.id, permissions: admin.permissions },
   });
   response.cookies.set({
     name: ADMIN_SESSION_COOKIE,

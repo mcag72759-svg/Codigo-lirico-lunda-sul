@@ -13,7 +13,7 @@ export async function GET() {
   if (!admin) return NextResponse.json({ authenticated: false }, { status: 200 });
   return NextResponse.json({
     authenticated: true,
-    admin: { displayName: admin.displayName, email: admin.email, role: admin.role },
+    admin: { id: admin.id, displayName: admin.displayName, email: admin.email, role: admin.role, permissions: admin.permissions },
   });
 }
 

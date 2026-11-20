@@ -7,6 +7,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 
 type Artist={stageName:string;applicationId:string};
+type AdminViewer={id:string;displayName:string;role:string};
 type Post={
   id:string;authorId:string;title:string;contentType:string;body:string;mediaUrl:string;mediaType:string;
   location:string;organizer:string;eventStartsAt:string|null;ticketPrice:string;ticketUrl:string;
@@ -41,6 +42,7 @@ function PostViewTracker({postId,onViewed}:{postId:string;onViewed:(id:string,to
 
 export default function CommunityPage(){
   const [artist,setArtist]=useState<Artist|null>(null);
+  const [adminViewer,setAdminViewer]=useState<AdminViewer|null>(null);
   const [posts,setPosts]=useState<Post[]>([]);
   const [loaded,setLoaded]=useState(false);
   const [email,setEmail]=useState("");
@@ -65,7 +67,7 @@ export default function CommunityPage(){
     const response=await fetch("/api/community/feed",{credentials:"same-origin",cache:"no-store"});
     const data=await response.json();
     if(!response.ok)throw new Error(data.error??"Não foi possível carregar a comunidade.");
-    setArtist(data.artist??null);setPosts(data.posts??[]);
+    setArtist(data.artist??null);setAdminViewer(data.admin??null);setPosts(data.posts??[]);
   },[]);
 
   const refreshInbox=useCallback(async()=>{
@@ -95,7 +97,7 @@ export default function CommunityPage(){
   },[refreshInbox]);
 
   useEffect(()=>{
-    if(!artist)return;
+    if(!artist&&!adminViewer)return;
     const targetId=new URLSearchParams(window.location.search).get("messageTo")?.trim()??"";
     if(!targetId||messageTargetOpened.current===targetId)return;
     messageTargetOpened.current=targetId;
@@ -110,7 +112,7 @@ export default function CommunityPage(){
         refreshInbox().catch(()=>{});
       })
       .catch(error=>setMessage(error instanceof Error?error.message:"Não foi possível abrir a conversa."));
-  },[artist,refreshInbox]);
+  },[artist,adminViewer,refreshInbox]);
 
   async function login(event:FormEvent<HTMLFormElement>){
     event.preventDefault();setBusy(true);setMessage("");
@@ -125,8 +127,8 @@ export default function CommunityPage(){
   async function logout(){
     setBusy(true);
     try{
-      await fetch("/api/artist/session",{method:"DELETE",credentials:"same-origin"});
-      setArtist(null);messageTargetOpened.current=null;setComments({});setConversations([]);setActiveThread(null);setDirectMessages([]);setInboxOpen(false);
+      await fetch(artist?"/api/artist/session":"/api/admin/session",{method:"DELETE",credentials:"same-origin"});
+      setArtist(null);setAdminViewer(null);messageTargetOpened.current=null;setComments({});setConversations([]);setActiveThread(null);setDirectMessages([]);setInboxOpen(false);
       setMessage("Sessão terminada.");
     }finally{setBusy(false);}
     await refresh().catch(()=>{});
@@ -156,7 +158,7 @@ export default function CommunityPage(){
   }
 
   async function react(postId:string){
-    if(!artist){setMessage("Inicia sessão como artista aprovado para reagir.");return;}
+    if(!artist&&!adminViewer){setMessage("Inicia sessão para reagir a publicações.");return;}
     setBusy(true);
     try{
       const response=await fetch("/api/community/react",{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({postId,reaction:"like"})});
@@ -167,7 +169,7 @@ export default function CommunityPage(){
   }
 
   async function follow(artistId:string){
-    if(!artist){setMessage("Inicia sessão como artista aprovado para seguir perfis.");return;}
+    if(!artist&&!adminViewer){setMessage("Inicia sessão para seguir perfis.");return;}
     setBusy(true);
     try{
       const response=await fetch("/api/community/follow",{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({artistId})});
@@ -178,13 +180,13 @@ export default function CommunityPage(){
   }
 
   async function openInbox(){
-    if(!artist){setMessage("Inicia sessão para consultar as mensagens.");return;}
+    if(!artist&&!adminViewer){setMessage("Inicia sessão para consultar as mensagens.");return;}
     setInboxOpen(true);setActiveThread(null);setDirectMessages([]);
     try{await refreshInbox();}catch(error){setMessage(error instanceof Error?error.message:"Não foi possível carregar as mensagens.");}
   }
 
   async function openThread(person:{id:string;stageName:string;municipality?:string;photoUrl?:string}){
-    if(!artist)return;
+    if(!artist&&!adminViewer)return;
     setBusy(true);
     try{
       const response=await fetch("/api/community/messages?artistId="+encodeURIComponent(person.id),{credentials:"same-origin",cache:"no-store"});
@@ -255,8 +257,8 @@ export default function CommunityPage(){
       <p>Um espaço de partilha para artistas aprovados: publicações, comentários, reacções, mensagens e ligações entre criadores.</p>
     </header>
 
-    {artist?<div className="community-account-bar"><span>Sessão activa: <strong>{artist.stageName}</strong></span><div><button type="button" onClick={openInbox} disabled={busy}>Mensagens privadas · {conversations.reduce((sum,item)=>sum+item.unreadCount,0)} novas</button><button type="button" onClick={logout} disabled={busy}>Terminar sessão</button></div></div>:<form className="community-login" onSubmit={login}>
-      <div><strong>Participa na comunidade</strong><p>O acesso é reservado a contas de artista já aprovadas.</p></div>
+    {(artist||adminViewer)?<div className="community-account-bar"><span>Sessão activa: <strong>{artist?.stageName??adminViewer?.displayName}</strong>{adminViewer?" · Administração":""}</span><div><button type="button" onClick={openInbox} disabled={busy}>Mensagens privadas · {conversations.reduce((sum,item)=>sum+item.unreadCount,0)} novas</button><button type="button" onClick={logout} disabled={busy}>Terminar sessão</button></div></div>:<form className="community-login" onSubmit={login}>
+      <div><strong>Participa na comunidade</strong><p>Artistas aprovados e administradores autorizados podem interagir. A administração entra pelo painel administrativo.</p></div>
       <label>E-mail<input type="email" autoComplete="username" value={email} onChange={e=>setEmail(e.target.value)} required/></label>
       <label>Palavra-passe<input type="password" autoComplete="current-password" value={password} onChange={e=>setPassword(e.target.value)} required minLength={8}/></label>
       <button className="button button-light" type="submit" disabled={busy}>{busy?"A verificar…":"Entrar"}</button>
@@ -299,7 +301,7 @@ export default function CommunityPage(){
       {!loaded?<p className="latest-empty">A carregar publicações…</p>:posts.length===0?<p className="latest-empty">Ainda não há publicações. Os artistas aprovados podem começar a partilhar.</p>:posts.map(post=><article className="community-post" key={post.id}>
         <PostViewTracker postId={post.id} onViewed={updatePostViews}/>
         <div className="community-post-head"><div className="community-avatar">{post.author.slice(0,2).toUpperCase()}</div><div className="community-author"><strong>{post.author}</strong><span>{post.municipality} · {post.genre}</span><small>{dateLabel(post.createdAt)} · {post.visibility==="followers"?"Seguidores":"Público"}</small></div>
-          {post.status!=="approved"?<span className="community-status">{post.status==="pending"?"A aguardar revisão":post.scheduledAt?"Agendado":"Não aprovado"}</span>:artist&&!post.isMine&&<div className="community-post-author-actions"><button className="community-follow" type="button" onClick={()=>follow(post.authorId)} disabled={busy}>{post.isFollowing?"A seguir":"Seguir"}</button><button className="community-follow" type="button" onClick={()=>openThread({id:post.authorId,stageName:post.author,municipality:post.municipality,photoUrl:post.photoUrl})} disabled={busy}>Mensagem</button></div>}
+          {post.status!=="approved"?<span className="community-status">{post.status==="pending"?"A aguardar revisão":post.scheduledAt?"Agendado":"Não aprovado"}</span>:(artist||adminViewer)&&!post.isMine&&<div className="community-post-author-actions"><button className="community-follow" type="button" onClick={()=>follow(post.authorId)} disabled={busy}>{post.isFollowing?"A seguir":"Seguir"}</button><button className="community-follow" type="button" onClick={()=>openThread({id:post.authorId,stageName:post.author,municipality:post.municipality,photoUrl:post.photoUrl})} disabled={busy}>Mensagem</button></div>}
         </div>
         <div className="community-content-label">{categoryLabels[post.contentType]??post.contentType}</div>
         {post.title&&<h3 className="community-post-title">{post.title}</h3>}
@@ -319,7 +321,7 @@ export default function CommunityPage(){
         </div>}
         {expanded[post.id]&&<div className="community-comments">
           {(comments[post.id]??[]).length===0?<p className="community-no-comments">Ainda não há comentários.</p>:(comments[post.id]??[]).map(comment=><div className="community-comment" key={comment.id}><strong>{comment.author}</strong><p>{comment.body}</p><small>{dateLabel(comment.createdAt)}</small></div>)}
-          {artist&&<form className="community-comment-form" onSubmit={e=>submitComment(e,post.id)}><input value={commentDrafts[post.id]??""} onChange={e=>setCommentDrafts(current=>({...current,[post.id]:e.target.value}))} maxLength={2000} placeholder="Escreve um comentário…" required/><button type="submit" disabled={busy}>Enviar</button></form>}
+          {(artist||adminViewer)&&<form className="community-comment-form" onSubmit={e=>submitComment(e,post.id)}><input value={commentDrafts[post.id]??""} onChange={e=>setCommentDrafts(current=>({...current,[post.id]:e.target.value}))} maxLength={2000} placeholder="Escreve um comentário…" required/><button type="submit" disabled={busy}>Enviar</button></form>}
         </div>}
       </article>)}
     </section>

@@ -6,13 +6,16 @@ import {
   communityReactions, platformPublications, publishedContent,
 } from "@/lib/db/schema";
 import { getArtistSession } from "@/lib/security/artist-session";
+import { getAdminSession } from "@/lib/security/admin-session";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   const now = new Date();
-  const artist = await getArtistSession();
+  const [artist, admin] = await Promise.all([getArtistSession(), getAdminSession()]);
+  const actorId = artist?.applicationId ?? admin?.id ?? null;
+
   const [legacy, current, artistUploads, community, approvedArtists] = await Promise.all([
     db.select({
       id: publishedContent.id, type: publishedContent.type, title: publishedContent.title,
@@ -21,7 +24,8 @@ export async function GET() {
       featured: publishedContent.featured, createdAt: publishedContent.createdAt,
     }).from(publishedContent).orderBy(desc(publishedContent.createdAt)).limit(30),
     db.select({
-      id: platformPublications.id, type: platformPublications.type, title: platformPublications.title,
+      id: platformPublications.id, authorId: platformPublications.createdBy,
+      type: platformPublications.type, title: platformPublications.title,
       artist: platformPublications.author, genre: platformPublications.category, description: platformPublications.description,
       link: platformPublications.externalUrl, audioUrl: platformPublications.mediaUrl, imageUrl: platformPublications.imageUrl,
       featured: platformPublications.featured, createdAt: platformPublications.createdAt,
@@ -92,7 +96,7 @@ export async function GET() {
   );
   const candidates = [
     ...legacy.map(item => ({ ...item, authorId: null as string | null })),
-    ...current.map(item => ({ ...item, authorId: null as string | null })),
+    ...current,
     ...approvedArtistUploads,
     ...artistPosts,
   ];
@@ -104,7 +108,7 @@ export async function GET() {
   const ids = items.map(item => item.id);
   if (!ids.length) {
     return NextResponse.json([], {
-      headers: { "Cache-Control": artist ? "private, no-store" : "public, s-maxage=20, stale-while-revalidate=60" },
+      headers: { "Cache-Control": actorId ? "private, no-store" : "public, s-maxage=20, stale-while-revalidate=60" },
     });
   }
 
@@ -114,15 +118,15 @@ export async function GET() {
     db.select({ postId: communityComments.postId, total: count() })
       .from(communityComments).where(inArray(communityComments.postId, ids)).groupBy(communityComments.postId),
   ]);
-  const myReactions = artist
+  const myReactions = actorId
     ? await db.select({ contentId: communityReactions.contentId, reaction: communityReactions.reaction })
         .from(communityReactions)
-        .where(and(eq(communityReactions.actorId, artist.applicationId), inArray(communityReactions.contentId, ids)))
+        .where(and(eq(communityReactions.actorId, actorId), inArray(communityReactions.contentId, ids)))
     : [];
-  const authorIds = [...new Set(items.map(item => item.authorId).filter((id): id is string => Boolean(id) && id !== artist?.applicationId))];
-  const followingRows = artist && authorIds.length
+  const authorIds = [...new Set(items.map(item => item.authorId).filter((id): id is string => Boolean(id) && id !== actorId))];
+  const followingRows = actorId && authorIds.length
     ? await db.select({ followedId: communityFollows.followedId }).from(communityFollows)
-        .where(and(eq(communityFollows.followerId, artist.applicationId), inArray(communityFollows.followedId, authorIds)))
+        .where(and(eq(communityFollows.followerId, actorId), inArray(communityFollows.followedId, authorIds)))
     : [];
 
   const reactions = new Map(reactionCounts.map(row => [row.contentId, Number(row.total)]));
@@ -136,9 +140,9 @@ export async function GET() {
     commentCount: comments.get(item.id) ?? 0,
     myReaction: mine.get(item.id) ?? null,
     isFollowing: item.authorId ? followed.has(item.authorId) : false,
-    isMine: item.authorId === artist?.applicationId,
-    isAuthenticated: Boolean(artist),
+    isMine: item.authorId === actorId,
+    isAuthenticated: Boolean(actorId),
   })), {
-    headers: { "Cache-Control": artist ? "private, no-store" : "public, s-maxage=20, stale-while-revalidate=60" },
+    headers: { "Cache-Control": actorId ? "private, no-store" : "public, s-maxage=20, stale-while-revalidate=60" },
   });
 }

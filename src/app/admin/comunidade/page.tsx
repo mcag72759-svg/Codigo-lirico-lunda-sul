@@ -3,12 +3,13 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
-type PendingPost={id:string;title:string;contentType:string;body:string;mediaUrl:string;mediaType:string;visibility:string;location:string;organizer:string;eventStartsAt:string|null;ticketPrice:string;ticketUrl:string;scheduledAt:string|null;createdAt:string;authorId:string;artist:string;municipality:string};
+type PendingPost={id:string;title:string;contentType:string;body:string;mediaUrl:string;mediaType:string;visibility:string;location:string;organizer:string;eventStartsAt:string|null;ticketPrice:string;ticketUrl:string;scheduledAt:string|null;createdAt:string;authorId:string;artist:string;municipality:string;status?:string};
 type Report={id:number;reporterId:string;targetType:string;targetId:string;reason:string;status:string;createdAt:string;reporter:string};
 
 export default function CommunityModerationPage(){
   const [posts,setPosts]=useState<PendingPost[]>([]);
   const [reports,setReports]=useState<Report[]>([]);
+  const [recentPosts,setRecentPosts]=useState<PendingPost[]>([]);
   const [authorized,setAuthorized]=useState(false);
   const [loaded,setLoaded]=useState(false);
   const [busy,setBusy]=useState(false);
@@ -18,7 +19,7 @@ export default function CommunityModerationPage(){
     const response=await fetch("/api/admin/community-moderation",{credentials:"same-origin",cache:"no-store"});
     const data=await response.json();
     if(!response.ok)throw new Error(data.error??"Inicia sessão no painel administrativo.");
-    setPosts(data.posts??[]);setReports(data.reports??[]);setAuthorized(true);
+    setPosts(data.posts??[]);setRecentPosts(data.recentPosts??[]);setReports(data.reports??[]);setAuthorized(true);
   },[]);
   useEffect(()=>{
     let active=true;
@@ -27,7 +28,7 @@ export default function CommunityModerationPage(){
       .then(({response,data})=>{
         if(!active)return;
         if(!response.ok)throw new Error(data.error??"Inicia sessão no painel administrativo.");
-        setPosts(data.posts??[]);setReports(data.reports??[]);setAuthorized(true);
+        setPosts(data.posts??[]);setRecentPosts(data.recentPosts??[]);setReports(data.reports??[]);setAuthorized(true);
       })
       .catch(error=>{if(active)setMessage(error instanceof Error?error.message:"Acesso não autorizado.")})
       .finally(()=>{if(active)setLoaded(true)});
@@ -44,6 +45,17 @@ export default function CommunityModerationPage(){
     finally{setBusy(false);}
   }
 
+  async function removePost(id:string){
+    if(!window.confirm("Apagar permanentemente esta publicação e os comentários, gostos e visualizações associados?"))return;
+    setBusy(true);
+    try{
+      const response=await fetch("/api/admin/community-moderation",{method:"DELETE",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({id})});
+      const data=await response.json();if(!response.ok)throw new Error(data.error??"Não foi possível apagar a publicação.");
+      await load();setMessage("Publicação removida.");
+    }catch(error){setMessage(error instanceof Error?error.message:"Erro ao remover publicação.");}
+    finally{setBusy(false);}
+  }
+
   return <main className="admin-publish-page">
     <Link className="admin-back-link" href="/admin/publicar">← Voltar à administração</Link>
     <div className="admin-publish-heading"><span className="section-kicker">ADMINISTRAÇÃO / COMUNIDADE</span><h1>Moderação <em>da comunidade.</em></h1><p>Revê as publicações dos artistas e trata das denúncias antes de o conteúdo permanecer visível.</p></div>
@@ -53,6 +65,13 @@ export default function CommunityModerationPage(){
         {posts.length===0?<p className="admin-security-note">Não há publicações pendentes.</p>:posts.map(post=><article className="admin-publication-item community-moderation-item" key={post.id}>
           <div><span>{post.contentType.toUpperCase()} · {post.visibility==="followers"?"SÓ SEGUIDORES":"PÚBLICO"} · {post.municipality}</span><h3>{post.title||post.artist}</h3><p>Por {post.artist}</p>{post.body&&<p>{post.body}</p>}{post.eventStartsAt&&<p>{new Date(post.eventStartsAt).toLocaleString("pt-AO")} · {post.location} · {post.organizer}</p>}{post.ticketPrice&&<p>Bilhete: {post.ticketPrice}</p>}{post.scheduledAt&&<p>Agendamento: {new Date(post.scheduledAt).toLocaleString("pt-AO")}</p>}{post.ticketUrl&&<a className="download-link" href={post.ticketUrl} target="_blank" rel="noreferrer">Ver ligação de bilhetes ↗</a>}{post.mediaUrl&&<a className="download-link" href={post.mediaUrl} target="_blank" rel="noreferrer">Pré-visualizar anexo ↗</a>}</div>
           <div className="admin-item-actions"><button className="admin-edit" type="button" disabled={busy} onClick={()=>decide("post",post.id,"approved")}>Aprovar</button><button className="admin-delete" type="button" disabled={busy} onClick={()=>decide("post",post.id,"rejected")}>Rejeitar</button></div>
+        </article>)}
+      </section>
+      <section className="admin-publication-list">
+        <div className="admin-list-heading"><h2>Publicações já visíveis</h2><span>{recentPosts.filter(post=>post.status==="approved").length} publicadas</span></div>
+        {recentPosts.filter(post=>post.status==="approved").length===0?<p className="admin-security-note">Ainda não existem publicações aprovadas para gerir.</p>:recentPosts.filter(post=>post.status==="approved").map(post=><article className="admin-publication-item community-moderation-item" key={post.id}>
+          <div><span>{post.contentType.toUpperCase()} · PÚBLICO · {post.municipality}</span><h3>{post.title||post.artist}</h3><p>Por {post.artist} · {new Date(post.createdAt).toLocaleDateString("pt-AO")}</p>{post.body&&<p>{post.body}</p>}{post.mediaUrl&&<a className="download-link" href={post.mediaUrl} target="_blank" rel="noreferrer">Pré-visualizar anexo ↗</a>}</div>
+          <div className="admin-item-actions"><button className="admin-delete" type="button" disabled={busy} onClick={()=>decide("post",post.id,"rejected")}>Retirar do público</button><button className="admin-delete" type="button" disabled={busy} onClick={()=>removePost(post.id)}>Apagar</button></div>
         </article>)}
       </section>
       <section className="admin-publication-list">

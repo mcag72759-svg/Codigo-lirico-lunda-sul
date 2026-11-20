@@ -5,11 +5,11 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { platformAuditLog, platformPublications } from "@/lib/db/schema";
 import { getAdminSession, requestOriginIsSame } from "@/lib/security/admin-session";
-import { hasPermission } from "@/lib/security/permissions";
+import { hasAnyPermission, hasPermission } from "@/lib/security/permissions";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-const CONTENT_TYPES = new Set(["article","music","video","announcement","poetry","event","opportunity","gallery","organization","partnership","ticket"]);
+const CONTENT_TYPES = new Set(["text","article","news","music","video","podcast","announcement","poetry","event","opportunity","gallery","organization","partnership","ticket","document","course","livestream","press_release","call_for_artists","resource"]);
 const STATUSES = new Set(["draft","published","scheduled","archived"]);
 
 function cleanText(value: unknown, maxLength: number): string {
@@ -29,10 +29,11 @@ function parseDate(value: unknown): Date | null | false {
 }
 function parsePublication(body: Record<string, unknown>, fallbackAuthor: string) {
   const type = cleanText(body.type, 32);
-  const title = cleanText(body.title, 160);
   const author = cleanText(body.artist ?? body.author, 120) || fallbackAuthor;
   const category = cleanText(body.genre ?? body.category, 80) || "Geral";
   const description = cleanText(body.description, 12000);
+  const rawTitle = cleanText(body.title, 160);
+  const title = rawTitle || (type === "text" ? description.slice(0, 80) || "Texto simples" : "");
   const statusValue = cleanText(body.status, 20);
   const status = STATUSES.has(statusValue) ? statusValue : "published";
   const scheduledAt = parseDate(body.scheduledAt);
@@ -68,7 +69,7 @@ async function audit(adminId: string, action: string, id: string, title: string)
 
 export async function GET() {
   const admin = await getAdminSession();
-  if (!admin || !hasPermission(admin, "content.manage")) {
+  if (!admin || !hasAnyPermission(admin, ["content.view", "content.manage"])) {
     return NextResponse.json({ error: "Acesso administrativo necessário." }, { status: 401 });
   }
   const items = await db.select().from(platformPublications)
@@ -78,7 +79,7 @@ export async function GET() {
 export async function POST(request: Request) {
   if (!requestOriginIsSame(request)) return NextResponse.json({ error: "Pedido de origem não permitida." }, { status: 403 });
   const admin = await getAdminSession();
-  if (!admin || !hasPermission(admin, "content.publish")) {
+  if (!admin || !hasAnyPermission(admin, ["content.publish", "content.manage"])) {
     return NextResponse.json({ error: "Não tens permissão para publicar conteúdo." }, { status: 403 });
   }
   let input: unknown;

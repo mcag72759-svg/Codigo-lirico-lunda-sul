@@ -6,14 +6,14 @@ import {
   communityPosts, communityReactions,
 } from "@/lib/db/schema";
 import { getAdminSession } from "@/lib/security/admin-session";
-import { hasPermission } from "@/lib/security/permissions";
+import { hasAnyPermission } from "@/lib/security/permissions";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   const admin = await getAdminSession();
-  if (!admin || !hasPermission(admin,"content.manage")) {
+  if (!admin || !hasAnyPermission(admin, ["analytics.view", "content.manage"])) {
     return NextResponse.json({ error: "Acesso administrativo necessário." }, { status: 401 });
   }
   const [artists,posts,pending,likes,comments,views,follows,latestPosts] = await Promise.all([
