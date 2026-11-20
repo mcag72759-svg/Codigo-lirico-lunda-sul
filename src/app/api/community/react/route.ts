@@ -19,7 +19,7 @@ export async function POST(request: Request) {
   const kind = body.reaction === "love" || body.reaction === "support" ? body.reaction : "like";
   if (!postId) return NextResponse.json({ error: "Publicação inválida." }, { status: 400 });
   const post = await canReadCommunityPost(postId, artist.applicationId);
-  if (!post || await hasCommunityBlock(artist.applicationId, post.authorId)) {
+  if (!post || (post.authorId && await hasCommunityBlock(artist.applicationId, post.authorId))) {
     return NextResponse.json({ error: "Esta publicação não está disponível para interacção." }, { status: 403 });
   }
   const [existing] = await db.select({ id: communityReactions.id, reaction: communityReactions.reaction })

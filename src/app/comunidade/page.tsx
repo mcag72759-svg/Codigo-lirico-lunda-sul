@@ -58,6 +58,7 @@ export default function CommunityPage(){
   const [directMessages,setDirectMessages]=useState<DirectMessage[]>([]);
   const [directDraft,setDirectDraft]=useState("");
   const [busy,setBusy]=useState(false);
+  const messageTargetOpened = useRef<string | null>(null);
   const [message,setMessage]=useState("");
 
   const refresh=useCallback(async()=>{
@@ -93,6 +94,24 @@ export default function CommunityPage(){
     return()=>{active=false;};
   },[refreshInbox]);
 
+  useEffect(()=>{
+    if(!artist)return;
+    const targetId=new URLSearchParams(window.location.search).get("messageTo")?.trim()??"";
+    if(!targetId||messageTargetOpened.current===targetId)return;
+    messageTargetOpened.current=targetId;
+    fetch("/api/community/messages?artistId="+encodeURIComponent(targetId),{credentials:"same-origin",cache:"no-store"})
+      .then(async response=>{
+        const data=await response.json();
+        if(!response.ok)throw new Error(data.error??"Não foi possível abrir esta conversa.");
+        if(!data.conversation)throw new Error("O perfil deste autor não está disponível para mensagens.");
+        setActiveThread(data.conversation.artist);
+        setDirectMessages(data.messages??[]);
+        setInboxOpen(true);
+        refreshInbox().catch(()=>{});
+      })
+      .catch(error=>setMessage(error instanceof Error?error.message:"Não foi possível abrir a conversa."));
+  },[artist,refreshInbox]);
+
   async function login(event:FormEvent<HTMLFormElement>){
     event.preventDefault();setBusy(true);setMessage("");
     try{
@@ -107,7 +126,7 @@ export default function CommunityPage(){
     setBusy(true);
     try{
       await fetch("/api/artist/session",{method:"DELETE",credentials:"same-origin"});
-      setArtist(null);setComments({});setConversations([]);setActiveThread(null);setDirectMessages([]);setInboxOpen(false);
+      setArtist(null);messageTargetOpened.current=null;setComments({});setConversations([]);setActiveThread(null);setDirectMessages([]);setInboxOpen(false);
       setMessage("Sessão terminada.");
     }finally{setBusy(false);}
     await refresh().catch(()=>{});

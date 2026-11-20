@@ -41,7 +41,7 @@ export async function POST(request: Request) {
   if (!postId || !text) return NextResponse.json({ error: "Escreve um comentário." }, { status: 400 });
   const post = await canReadCommunityPost(postId, artist.applicationId);
   if (!post) return NextResponse.json({ error: "Não podes comentar esta publicação." }, { status: 403 });
-  if (await hasCommunityBlock(artist.applicationId, post.authorId)) return NextResponse.json({ error: "Esta interacção não está disponível." }, { status: 403 });
+  if (post.authorId && await hasCommunityBlock(artist.applicationId, post.authorId)) return NextResponse.json({ error: "Esta interacção não está disponível." }, { status: 403 });
   const [comment] = await db.insert(communityComments).values({
     id: randomUUID(),
     postId,
