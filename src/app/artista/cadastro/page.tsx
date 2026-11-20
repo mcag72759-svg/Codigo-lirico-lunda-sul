@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter, useState } from "next/navigation";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 import type { FormEvent } from "react";
 
 type ApplicationResult = { email: string; message: string };
