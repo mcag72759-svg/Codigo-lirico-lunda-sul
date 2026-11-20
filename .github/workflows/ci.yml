@@ -2,9 +2,9 @@ name: CI
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, rebuild/clean-professional-v1]
   push:
-    branches: [main]
+    branches: [main, rebuild/clean-professional-v1]
 
 permissions:
   contents: read
