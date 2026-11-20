@@ -20,12 +20,12 @@ type ArtistMedia = {
 };
 type ArtistApplication = {
   id:string; stageName:string; fullName:string; municipality:string; genre:string; email:string;
-  phone:string; bio:string; link:string; status:string; createdAt:string;
+  phone:string; bio:string; link:string; status:string; createdAt:string; hasAccount:boolean;
 };
 const types = [["text","Texto simples"],["article","Artigo / notícia"],["news","Notícia"],["music","Música"],["video","Vídeo"],["podcast","Podcast"],["announcement","Anúncio"],["poetry","Poesia / literatura"],["event","Evento"],["opportunity","Oportunidade"],["gallery","Galeria"],["organization","Organização"],["partnership","Parceria"],["ticket","Bilheteira"],["document","Documento / PDF"],["course","Formação"],["livestream","Transmissão em directo"],["press_release","Comunicado"],["call_for_artists","Chamada para artistas"],["resource","Recurso"]];
 const statusLabels:Record<string,string>={pending:"A aguardar revisão",approved:"Aprovado e público",rejected:"Não aprovado"};
-const applicationStatusLabels:Record<string,string>={pending:"Candidatura pendente",approved:"Conta activa",rejected:"Conta suspensa / rejeitada"};
-const permissionOptions=[["content.view","Consultar publicações"],["content.publish","Criar e publicar conteúdo"],["content.manage","Editar e remover conteúdo"],["artists.view","Consultar contas de artistas"],["artists.review","Aprovar e rejeitar artistas e ficheiros"],["artists.manage","Suspender e remover contas"],["community.moderate","Moderar, retirar e remover publicações"],["analytics.view","Consultar estatísticas"],["administrators.manage","Gerir administradores e permissões"]];
+const applicationStatusLabels:Record<string,string>={pending:"Candidatura pendente",approved:"Candidatura aprovada",rejected:"Estado antigo / inactivo"};
+const permissionOptions=[["content.view","Consultar publicações"],["content.publish","Criar e publicar conteúdo"],["content.manage","Editar e remover conteúdo"],["artists.view","Consultar contas de artistas"],["artists.review","Aprovar candidaturas e rever ficheiros"],["artists.manage","Gerir acessos de artistas"],["community.moderate","Moderar, retirar e remover publicações"],["analytics.view","Consultar estatísticas"],["administrators.manage","Gerir administradores e permissões"]];
 const rolePresets:Record<string,string[]>={publisher:["content.view","content.publish"],editor:["content.view","content.publish","content.manage"],artist_moderator:["artists.view","artists.review","artists.manage"],community_moderator:["community.moderate"],analyst:["analytics.view"],platform_manager:["content.view","content.publish","content.manage","artists.view","artists.review","artists.manage","community.moderate","analytics.view"]};
 const roleLabels:Record<string,string>={publisher:"Publicador",editor:"Editor de conteúdo",artist_moderator:"Gestor de artistas",community_moderator:"Moderador da comunidade",analyst:"Analista",platform_manager:"Gestor da plataforma"};
 
@@ -38,6 +38,7 @@ export default function AdminPublishPage() {
   const [items,setItems]=useState<Publication[]>([]);
   const [artistMediaItems,setArtistMediaItems]=useState<ArtistMedia[]>([]);
   const [artistApplications,setArtistApplications]=useState<ArtistApplication[]>([]);
+  const [activationCredential,setActivationCredential]=useState<{applicationId:string;stageName:string;email:string;code:string}|null>(null);
   const [administrators,setAdministrators]=useState<AdminRecord[]>([]);
   const [newAdminName,setNewAdminName]=useState("");
   const [newAdminEmail,setNewAdminEmail]=useState("");
@@ -90,7 +91,7 @@ export default function AdminPublishPage() {
   async function logout(){
     setBusy(true);
     try{await fetch("/api/admin/session",{method:"DELETE",credentials:"same-origin"});}
-    finally{setAdmin(null);setItems([]);setArtistMediaItems([]);setArtistApplications([]);setAdministrators([]);setAnalytics(null);setEditing(null);setCreatedAdminSecret(null);setBusy(false);setMessage("Sessão terminada.");}
+    finally{setAdmin(null);setItems([]);setArtistMediaItems([]);setArtistApplications([]);setAdministrators([]);setAnalytics(null);setEditing(null);setCreatedAdminSecret(null);setActivationCredential(null);setBusy(false);setMessage("Sessão terminada.");}
   }
 
   async function sendFile(file:File,kind:"media"|"cover"){
@@ -158,25 +159,35 @@ export default function AdminPublishPage() {
     finally{setBusy(false);}
   }
 
-  async function reviewArtistApplication(id:string,status:"approved"|"rejected"|"pending"){
-    setBusy(true);setMessage(status==="approved"?"A aprovar conta…":status==="pending"?"A devolver para revisão…":"A suspender conta…");
+  async function reviewArtistApplication(id:string){
+    setBusy(true);setMessage("A aprovar candidatura…");
     try{
-      const r=await fetch("/api/admin/artist-applications",{method:"PATCH",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,status})});
-      const j=await r.json();if(!r.ok)throw new Error(j.error??"Não foi possível rever a candidatura.");
-      await loadItems();setMessage(status==="approved"?"Conta aprovada. O artista pode entrar novamente.":status==="pending"?"Conta devolvida para revisão.":"Conta suspensa; as sessões existentes foram invalidadas.");
-    }catch(e){setMessage(e instanceof Error?e.message:"Erro ao rever a candidatura.");}
+      const r=await fetch("/api/admin/artist-applications",{method:"PATCH",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,status:"approved"})});
+      const j=await r.json();if(!r.ok)throw new Error(j.error??"Não foi possível aprovar a candidatura.");
+      await loadItems();setMessage("Candidatura aprovada. O artista já pode entrar com o e-mail e a palavra-passe escolhidos no cadastro.");
+    }catch(e){setMessage(e instanceof Error?e.message:"Erro ao aprovar a candidatura.");}
     finally{setBusy(false);}
   }
 
-  async function removeArtistApplication(item:ArtistApplication){
-    if(!window.confirm("Remover permanentemente a conta de "+item.stageName+"? Os ficheiros, publicações, comentários e conversas ligados a esta conta também serão removidos."))return;
-    setBusy(true);
+  async function issueArtistActivationCode(item:ArtistApplication){
+    setBusy(true);setMessage("A emitir código privado de acesso…");setActivationCredential(null);
     try{
-      const r=await fetch("/api/admin/artist-applications",{method:"DELETE",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:item.id})});
-      const j=await r.json();if(!r.ok)throw new Error(j.error??"Não foi possível remover a conta.");
-      await loadItems();setMessage("Conta de artista removida.");
-    }catch(e){setMessage(e instanceof Error?e.message:"Erro ao remover a conta.");}
+      const r=await fetch("/api/admin/artist-applications/activation-code",{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:item.id})});
+      const j=await r.json();if(!r.ok)throw new Error(j.error??"Não foi possível emitir o código.");
+      setActivationCredential({applicationId:item.id,stageName:j.stageName,email:j.email,code:j.activationCode});
+      setMessage("Código emitido. Entrega-o directamente ao artista; só pode ser utilizado uma vez.");
+    }catch(e){setMessage(e instanceof Error?e.message:"Erro ao emitir código de acesso.");}
     finally{setBusy(false);}
+  }
+
+  async function copyActivationCode(){
+    if(!activationCredential)return;
+    try{
+      await navigator.clipboard.writeText(activationCredential.code);
+      setMessage("Código de acesso copiado.");
+    }catch{
+      setMessage("Selecciona o código apresentado e copia-o manualmente.");
+    }
   }
 
   async function removeArtistMedia(id:string){
@@ -295,9 +306,14 @@ export default function AdminPublishPage() {
             <p>{item.bio}</p>
             {item.link&&<a className="download-link" href={item.link} target="_blank" rel="noreferrer">Ver portefólio ↗</a>}
           </div>
-          <div className="admin-item-actions">{(admin.permissions.includes("*")||admin.permissions.includes("artists.review")||admin.permissions.includes("artists.manage")||admin.permissions.includes("content.manage"))&&<>{item.status!=="approved"&&<button className="admin-edit" type="button" onClick={()=>reviewArtistApplication(item.id,"approved")} disabled={busy}>Aprovar / reactivar</button>}{item.status==="pending"&&<button className="admin-delete" type="button" onClick={()=>reviewArtistApplication(item.id,"rejected")} disabled={busy}>Rejeitar</button>}{item.status==="approved"&&<button className="admin-delete" type="button" onClick={()=>reviewArtistApplication(item.id,"rejected")} disabled={busy}>Suspender</button>}{item.status==="rejected"&&<button className="admin-edit" type="button" onClick={()=>reviewArtistApplication(item.id,"pending")} disabled={busy}>Devolver à revisão</button>}</>}{(admin.permissions.includes("*")||admin.permissions.includes("artists.manage")||admin.permissions.includes("content.manage"))&&<button className="admin-delete" type="button" onClick={()=>removeArtistApplication(item)} disabled={busy}>Remover conta</button>}</div>
+          <div className="admin-item-actions">
+            {item.status==="pending"&&(admin.permissions.includes("*")||admin.permissions.includes("artists.review")||admin.permissions.includes("artists.manage")||admin.permissions.includes("content.manage"))&&<button className="admin-edit" type="button" onClick={()=>reviewArtistApplication(item.id)} disabled={busy}>Aprovar candidatura</button>}
+            {item.status==="approved"&&(admin.permissions.includes("*")||admin.permissions.includes("artists.review")||admin.permissions.includes("artists.manage")||admin.permissions.includes("content.manage"))&&<button className="admin-edit" type="button" onClick={()=>issueArtistActivationCode(item)} disabled={busy}>{item.hasAccount?"Gerar código de recuperação":"Gerar código de activação"}</button>}
+            {item.status==="approved"&&item.hasAccount&&<span className="admin-security-note">Conta com credenciais guardadas</span>}
+          </div>
+          {activationCredential?.applicationId===item.id&&<div className="admin-created-secret"><strong>Código privado · {activationCredential.stageName}</strong><p>{activationCredential.email}</p><code>{activationCredential.code}</code><button className="admin-edit" type="button" onClick={copyActivationCode}>Copiar código</button><p>Entrega este código ao artista. Ele deve abrir o estúdio, ir a “Activar / actualizar acesso” e criar uma nova palavra-passe. O código deixa de funcionar depois da utilização.</p></div>}
         </article>)}
-        <p className="admin-security-note">A aprovação não cria uma palavra-passe. O artista activa a própria conta com o código privado recebido ao candidatar-se.</p>
+        <p className="admin-security-note">O artista escolhe a palavra-passe durante a candidatura. Depois da aprovação, entra com o mesmo e-mail e a mesma palavra-passe. Para contas antigas ou palavras-passe esquecidas, emite um código privado de activação/recuperação nesta área.</p>
       </section>}
 
       {(admin.permissions.includes("*")||admin.permissions.includes("administrators.manage"))&&<section className="admin-publication-list">
