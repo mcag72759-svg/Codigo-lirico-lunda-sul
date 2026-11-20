@@ -143,13 +143,44 @@ export default function LatestContent() {
     } finally { setBusyId(null); }
   }
 
+  async function share(post: Publication) {
+    const shareUrl = new URL(window.location.href);
+    shareUrl.searchParams.set("publicacao", post.id);
+    shareUrl.hash = "publicacoes";
+    const shareData = {
+      title: post.title,
+      text: [post.title, post.artist ? "Por " + post.artist : "", post.description].filter(Boolean).join(" — "),
+      url: shareUrl.toString(),
+    };
+    try {
+      if (typeof navigator.share === "function") {
+        await navigator.share(shareData);
+        return;
+      }
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(shareUrl.toString());
+        setNotice("Ligação da publicação copiada. Já podes partilhá-la.");
+        return;
+      }
+      setNotice("Copia a ligação desta página a partir da barra do navegador para partilhares a publicação.");
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") return;
+      try {
+        await navigator.clipboard.writeText(shareUrl.toString());
+        setNotice("Ligação da publicação copiada. Já podes partilhá-la.");
+      } catch {
+        setNotice("Não foi possível abrir a partilha neste navegador. Tenta copiar a ligação da página.");
+      }
+    }
+  }
+
   if (!loaded || posts.length === 0) return null;
 
   return <section className="latest-section section-wrap" id="publicacoes">
     <div className="section-heading"><div><div className="section-kicker">ACTIVIDADE DA COMUNIDADE</div><h2>O que está a<br/><em>acontecer.</em></h2></div><p>Publicações editoriais da equipa<br/>e dos administradores do Código Lírico.</p></div>
     <div className="latest-controls"><label className="latest-search"><span className="sr-only">Pesquisar publicações</span><input value={search} onChange={e => setSearch(e.target.value)} placeholder="Pesquisar por título, artista ou tema…"/></label><div className="latest-filters" aria-label="Filtrar publicações">{filters.map(([v,l]) => <button className={filter === v ? "latest-filter active" : "latest-filter"} key={v} type="button" onClick={() => setFilter(v)} aria-pressed={filter === v}>{l}</button>)}</div></div>
     {notice && <p className="latest-social-notice" role="status">{notice} <Link href="/comunidade">Abrir Comunidade ↗</Link></p>}
-    {visiblePosts.length === 0 ? <p className="latest-empty">Não encontrámos publicações com esse filtro. Experimenta outra pesquisa.</p> : <div className="latest-grid">{visiblePosts.map(p => <article className={p.featured ? "latest-card latest-card-featured" : "latest-card"} key={p.id}>
+    {visiblePosts.length === 0 ? <p className="latest-empty">Não encontrámos publicações com esse filtro. Experimenta outra pesquisa.</p> : <div className="latest-grid">{visiblePosts.map(p => <article id={"publication-" + p.id} className={p.featured ? "latest-card latest-card-featured" : "latest-card"} key={p.id}>
       <div className="latest-card-top"><span>{p.type === "announcement" && mediaKind(p.audioUrl,p.type) === "audio" ? "Música" : p.type === "announcement" && mediaKind(p.audioUrl,p.type) === "video" ? "Vídeo" : labels[p.type] ?? p.type.toUpperCase()}</span>{p.featured && <span className="latest-featured">EM DESTAQUE</span>}</div>
       {p.imageUrl && <Image className="latest-image" src={p.imageUrl} alt={p.title} width={960} height={540} unoptimized/>}
       <div className="latest-card-content"><span className="latest-category">{p.genre}</span><h3>{p.title}</h3><p className="latest-byline">Por {p.artist}</p><p className="latest-description">{p.description}</p>
@@ -163,6 +194,7 @@ export default function LatestContent() {
       <div className="latest-social-actions" aria-label="Acções da publicação">
         <button type="button" onClick={() => react(p)} disabled={busyId === p.id}>{p.myReaction ? "♥ Gostei" : "♡ Gostar"} · {p.reactionCount}</button>
         <button type="button" onClick={() => toggleComments(p.id)}>Comentar · {p.commentCount}</button>
+        <button className="latest-share-button" type="button" onClick={() => share(p)}>Partilhar ↗</button>
         {p.authorId && !p.isMine && <>
           <button type="button" onClick={() => follow(p)} disabled={busyId === p.id}>{p.isFollowing ? "A seguir" : "Seguir"}</button>
           <Link href={"/comunidade?messageTo=" + encodeURIComponent(p.authorId)}>Enviar mensagem ↗</Link>
