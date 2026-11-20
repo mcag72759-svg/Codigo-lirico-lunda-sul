@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://codigo-lirico-lunda-sul.vercel.app"),
+  alternates: { canonical: "/" },
   title: "Código Lírico — Cultura independente angolana",
   description: "Uma plataforma para aproximar artistas, ideias e oportunidades. Da Lunda Sul para Angola e para o mundo.",
   applicationName: "Código Lírico",
