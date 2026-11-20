@@ -50,6 +50,14 @@ export default function LatestContent() {
     return () => controller.abort();
   }, []);
 
+  useEffect(() => {
+    if (!loaded || posts.length === 0) return;
+    const postId = new URLSearchParams(window.location.search).get("publicacao");
+    if (!postId) return;
+    const target = document.getElementById("publication-" + postId);
+    if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [loaded, posts]);
+
   const visiblePosts = useMemo(() => {
     const q = search.trim().toLocaleLowerCase("pt-AO");
     return posts.filter(p => {
@@ -146,7 +154,7 @@ export default function LatestContent() {
   async function share(post: Publication) {
     const shareUrl = new URL(window.location.href);
     shareUrl.searchParams.set("publicacao", post.id);
-    shareUrl.hash = "publicacoes";
+    shareUrl.hash = "publication-" + post.id;
     const shareData = {
       title: post.title,
       text: [post.title, post.artist ? "Por " + post.artist : "", post.description].filter(Boolean).join(" — "),
