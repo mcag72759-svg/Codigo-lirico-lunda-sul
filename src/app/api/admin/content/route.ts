@@ -11,6 +11,17 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 const CONTENT_TYPES = new Set(["text","article","news","music","video","podcast","announcement","poetry","event","opportunity","gallery","organization","partnership","ticket","document","course","livestream","press_release","call_for_artists","resource"]);
 const STATUSES = new Set(["draft","published","scheduled","archived"]);
+const STORAGE_TYPE_MAP: Record<string,string> = {
+  text: "announcement",
+  news: "article",
+  podcast: "music",
+  document: "article",
+  course: "article",
+  livestream: "video",
+  press_release: "article",
+  call_for_artists: "opportunity",
+  resource: "article",
+};
 
 function cleanText(value: unknown, maxLength: number): string {
   return typeof value === "string" ? value.trim().slice(0, maxLength) : "";
@@ -43,8 +54,9 @@ function parsePublication(body: Record<string, unknown>, fallbackAuthor: string)
   if (!CONTENT_TYPES.has(type) || !title || !description || scheduledAt === false || eventStartsAt === false) return null;
   if (status === "scheduled" && (!scheduledAt || scheduledAt.getTime() <= Date.now())) return null;
   if (rawTicketUrl && !ticketUrl) return null;
+  const storedType = STORAGE_TYPE_MAP[type] ?? type;
   return {
-    type, title, author, category, description,
+    type: storedType, title, author, category, description,
     externalUrl: safeUrl(body.link ?? body.externalUrl),
     mediaUrl: safeUrl(body.mediaUrl ?? body.audioUrl ?? body.videoUrl),
     imageUrl: safeUrl(body.imageUrl),
