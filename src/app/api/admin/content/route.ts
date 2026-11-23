@@ -1,9 +1,9 @@
 import { randomUUID } from "node:crypto";
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq, inArray, or } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
-import { platformAuditLog, platformPublications } from "@/lib/db/schema";
+import { communityComments, communityPostViews, communityReactions, communityReports, platformAuditLog, platformPublications } from "@/lib/db/schema";
 import { getAdminSession, requestOriginIsSame } from "@/lib/security/admin-session";
 import { hasAnyPermission, hasPermission } from "@/lib/security/permissions";
 
@@ -136,9 +136,24 @@ export async function DELETE(request: Request) {
   try { input = await request.json(); } catch { return NextResponse.json({ error: "Pedido inválido." }, { status: 400 }); }
   const id = input && typeof input === "object" ? cleanText((input as Record<string, unknown>).id, 80) : "";
   if (!id) return NextResponse.json({ error: "Identificador de publicação inválido." }, { status: 400 });
-  const [removed] = await db.delete(platformPublications)
-    .where(eq(platformPublications.id, id))
-    .returning({ id: platformPublications.id, title: platformPublications.title });
+
+  const removed = await db.transaction(async (tx) => {
+    const [existing] = await tx.select({ id: platformPublications.id, title: platformPublications.title })
+      .from(platformPublications).where(eq(platformPublications.id, id)).limit(1);
+    if (!existing) return null;
+    const comments = await tx.select({ id: communityComments.id })
+      .from(communityComments).where(eq(communityComments.postId, id));
+    const commentIds = comments.map(comment => comment.id);
+    await tx.delete(communityComments).where(eq(communityComments.postId, id));
+    await tx.delete(communityPostViews).where(eq(communityPostViews.postId, id));
+    await tx.delete(communityReactions).where(eq(communityReactions.contentId, id));
+    await tx.delete(communityReports).where(or(
+      and(eq(communityReports.targetType, "post"), eq(communityReports.targetId, id)),
+      ...(commentIds.length ? [and(eq(communityReports.targetType, "comment"), inArray(communityReports.targetId, commentIds))] : []),
+    ));
+    await tx.delete(platformPublications).where(eq(platformPublications.id, id));
+    return existing;
+  });
   if (!removed) return NextResponse.json({ error: "Publicação não encontrada." }, { status: 404 });
   await audit(admin.id, "content.delete", removed.id, removed.title);
   return NextResponse.json({ ok: true });
