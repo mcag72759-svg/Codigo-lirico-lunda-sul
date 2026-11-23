@@ -41,8 +41,10 @@ BEGIN
     SELECT 1 FROM public.platform_publications
     WHERE id = NEW.post_id AND (status = 'published' OR (status = 'scheduled' AND scheduled_at <= now()))
   ) AND NOT EXISTS (
-    SELECT 1 FROM public.artist_media
-    WHERE id = NEW.post_id AND status = 'approved' AND download_allowed = true
+    SELECT 1 FROM public.artist_media m
+    INNER JOIN public.artist_applications a ON a.id = m.application_id
+    WHERE m.id = NEW.post_id AND m.status = 'approved'
+      AND m.download_allowed = true AND a.status = 'approved'
   ) THEN
     RAISE EXCEPTION 'Comment target is not an available public publication'
       USING ERRCODE = '23503', CONSTRAINT = 'community_comments_post_reference_check';
