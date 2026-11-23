@@ -8,6 +8,7 @@ import {
   jsonb,
   numeric,
   pgTable,
+  primaryKey,
   text,
   timestamp,
   uniqueIndex,
@@ -78,6 +79,15 @@ export const artistSessions = pgTable("artist_sessions", {
 }, (table) => ({
   tokenHashUnique: uniqueIndex("artist_sessions_token_hash_key").on(table.tokenHash),
   expiryIdx: index("artist_sessions_expiry_idx").on(table.expiresAt),
+}));
+
+export const artistAuthAttempts = pgTable("artist_auth_attempts", {
+  id: bigserial("id", { mode: "number" }).primaryKey(),
+  ipHash: text("ip_hash").notNull(),
+  action: text("action").notNull(),
+  attemptedAt: timestamptz("attempted_at").notNull(),
+}, (table) => ({
+  ipActionTimeIdx: index("artist_auth_attempts_ip_action_time_idx").on(table.ipHash, table.action, table.attemptedAt.desc()),
 }));
 
 export const platformAdmins = pgTable("platform_admins", {
@@ -275,7 +285,10 @@ export const communityConversationMembers = pgTable("community_conversation_memb
   conversationId: text("conversation_id").notNull(),
   memberId: text("member_id").notNull(),
   joinedAt: timestamptz("joined_at").notNull(),
-});
+}, (table) => ({
+  pairPrimary: primaryKey({ columns: [table.conversationId, table.memberId], name: "community_conversation_members_pkey" }),
+  memberIdx: index("community_conversation_members_member_idx").on(table.memberId),
+}));
 
 export const communityPostViews = pgTable("community_post_views", {
   id: bigserial("id", { mode: "number" }).primaryKey(),
