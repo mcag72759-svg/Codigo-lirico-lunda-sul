@@ -5,7 +5,7 @@ import { upload } from "@vercel/blob/client";
 import { useCallback, useEffect, useState } from "react";
 import type { FormEvent } from "react";
 
-type Artist={stageName:string;email:string;municipality:string;genre:string;bio:string;photoUrl:string};
+type Artist={stageName:string;phone:string;email:string;municipality:string;genre:string;bio:string;photoUrl:string};
 type MetricPost={
   id:string;title:string;contentType:string;status:string;createdAt:string;scheduledAt:string|null;
   likes:number;comments:number;views:number;
@@ -35,7 +35,7 @@ function dateLabel(value:string){
 
 export default function ArtistStudioPage(){
   const [artist,setArtist]=useState<Artist|null>(null);
-  const [email,setEmail]=useState("");
+  const [phone,setPhone]=useState("");
   const [password,setPassword]=useState("");
   const [analytics,setAnalytics]=useState<Analytics|null>(null);
   const [tab,setTab]=useState<Tab>("overview");
@@ -74,7 +74,7 @@ export default function ArtistStudioPage(){
   async function login(event:FormEvent<HTMLFormElement>){
     event.preventDefault();setBusy(true);setMessage("");
     try{
-      const response=await fetch("/api/artist/login",{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({email,password})});
+      const response=await fetch("/api/artist/login",{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({phone,password})});
       const data=await response.json();
       if(!response.ok)throw new Error(data.error??"Não foi possível entrar.");
       setArtist(data.artist);setPassword("");await loadAnalytics();setMessage("Sessão iniciada.");
@@ -138,7 +138,7 @@ export default function ArtistStudioPage(){
       <p>Gere as tuas publicações, acompanha a audiência e apresenta os teus projectos ao público.</p>
       <form className="artist-console-card artist-console-login-form" onSubmit={login}>
         <h2>Entrar no estúdio</h2>
-        <label>E-mail da conta aprovada<input type="email" autoComplete="username" value={email} onChange={e=>setEmail(e.target.value)} required/></label>
+        <label>Número de telefone<input type="tel" inputMode="tel" autoComplete="username" value={phone} onChange={e=>setPhone(e.target.value)} placeholder="+244 9XX XXX XXX" required/></label>
         <label>Palavra-passe<input type="password" autoComplete="current-password" value={password} onChange={e=>setPassword(e.target.value)} minLength={8} maxLength={128} required/></label>
         <button className="artist-console-primary" type="submit" disabled={busy}>{busy?"A verificar…":"Entrar no estúdio ↗"}</button>
         <p className="admin-security-note">O acesso está reservado a artistas aprovados.</p>
