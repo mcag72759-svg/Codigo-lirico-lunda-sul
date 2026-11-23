@@ -38,7 +38,7 @@ export const artistApplications = pgTable("artist_applications", {
   updatedAt: timestamptz("updated_at").notNull(),
 }, (table) => ({
   phoneDigitsUnique: uniqueIndex("artist_applications_phone_digits_unique")
-    .on(sql`regexp_replace(${table.phone}, '[^0-9]', '', 'g')`)
+    .on(sql`(CASE WHEN length(regexp_replace(${table.phone}, '[^0-9]', '', 'g')) = 9 AND regexp_replace(${table.phone}, '[^0-9]', '', 'g') LIKE '9%' THEN '244' || regexp_replace(${table.phone}, '[^0-9]', '', 'g') ELSE regexp_replace(${table.phone}, '[^0-9]', '', 'g') END)`)
     .where(sql`btrim(${table.phone}) <> ''`),
 }));
 
