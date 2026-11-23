@@ -1,14 +1,17 @@
 import { createHash, randomBytes, randomUUID, scryptSync, timingSafeEqual } from "node:crypto";
-import { and, sql, eq } from "drizzle-orm";
+import { and, count, eq, gt, lte, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { artistAccounts, artistApplications, artistSessions } from "@/lib/db/schema";
+import { artistAccounts, artistApplications, artistAuthAttempts, artistSessions } from "@/lib/db/schema";
 import { normalizePhone, phoneDigits } from "@/lib/phone";
 import { ARTIST_SESSION_COOKIE } from "@/lib/security/artist-session";
 import { requestOriginIsSame } from "@/lib/security/admin-session";
+import { requestIpHash } from "@/lib/security/request-ip";
 
 export const runtime = "nodejs";
 const SESSION_SECONDS = 60 * 60 * 24 * 30;
+const LOGIN_WINDOW_MS = 15 * 60 * 1000;
+const MAX_FAILED_LOGINS = 10;
 
 function verifyPassword(password: string, salt: string, expectedHex: string): boolean {
   if (!/^[a-f0-9]{32}$/i.test(salt) || !/^[a-f0-9]{128}$/i.test(expectedHex)) return false;
@@ -30,6 +33,18 @@ export async function POST(request: Request) {
   }
 
   const input = body && typeof body === "object" ? body as Record<string, unknown> : {};
+  const ipHash = requestIpHash(request);
+  const windowStart = new Date(Date.now() - LOGIN_WINDOW_MS);
+  const [recentAttempts] = await db.select({ total: count() })
+    .from(artistAuthAttempts)
+    .where(and(
+      eq(artistAuthAttempts.ipHash, ipHash),
+      eq(artistAuthAttempts.action, "login"),
+      gt(artistAuthAttempts.attemptedAt, windowStart),
+    ));
+  if (Number(recentAttempts?.total ?? 0) >= MAX_FAILED_LOGINS) {
+    return NextResponse.json({ error: "Demasiadas tentativas de acesso. Aguarda 15 minutos antes de tentar novamente." }, { status: 429 });
+  }
   const phone = typeof input.phone === "string" ? normalizePhone(input.phone.trim()) : "";
   const digits = phoneDigits(phone);
   const password = typeof input.password === "string" ? input.password : "";
@@ -60,12 +75,19 @@ export async function POST(request: Request) {
     .limit(1);
 
   if (!record || !verifyPassword(password, record.passwordSalt, record.passwordHash)) {
+    await db.insert(artistAuthAttempts).values({ ipHash, action: "login", attemptedAt: new Date() });
     return NextResponse.json({ error: "Telefone ou palavra-passe incorrectos. Confirma os dados ou verifica se a conta já foi aprovada." }, { status: 401 });
   }
 
+  const now = new Date();
+  await db.delete(artistAuthAttempts).where(and(
+    eq(artistAuthAttempts.ipHash, ipHash),
+    eq(artistAuthAttempts.action, "login"),
+  ));
+  await db.delete(artistAuthAttempts).where(lte(artistAuthAttempts.attemptedAt, new Date(now.getTime() - 24 * 60 * 60 * 1000)));
+  await db.delete(artistSessions).where(lte(artistSessions.expiresAt, now));
   const token = randomBytes(32).toString("hex");
   const tokenHash = createHash("sha256").update(token).digest("hex");
-  const now = new Date();
   await db.insert(artistSessions).values({
     id: randomUUID(),
     accountId: record.accountId,

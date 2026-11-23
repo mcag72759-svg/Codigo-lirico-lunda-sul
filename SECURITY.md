@@ -13,3 +13,10 @@
 ## Comunicação de vulnerabilidades
 
 Não publiques detalhes de uma vulnerabilidade explorável em issues públicas. Contacta primeiro o responsável pelo projeto através dos canais privados da conta GitHub.
+
+## Autenticação, conteúdo e cópias
+
+- Os logins de artistas e administradores têm limitação de tentativas; a identificação de origem é guardada como hash, não como endereço IP em texto simples.
+- Comentários públicos são validados no servidor: autor deve ser artista aprovado ou administrador activo e o conteúdo alvo deve estar efectivamente disponível.
+- Ao remover conteúdo, os comentários, reacções, visualizações e denúncias associadas devem ser tratados na mesma operação transaccional.
+- O plano Neon actual limita a recuperação temporal a 6 horas e não permite criar uma rotina automática de snapshots neste projecto. O snapshot manual antes da migração não substitui cópias independentes regulares. Nunca anunciar retenção eterna sem uma política de backup comprovada.

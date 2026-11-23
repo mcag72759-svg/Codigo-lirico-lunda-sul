@@ -164,41 +164,49 @@ export async function DELETE(request: Request) {
     const authoredPosts = await tx.select({ id: communityPosts.id })
       .from(communityPosts).where(eq(communityPosts.authorId, id));
     const postIds = authoredPosts.map(post => post.id);
+    const authoredMedia = await tx.select({ id: artistMedia.id })
+      .from(artistMedia).where(eq(artistMedia.applicationId, id));
+    const mediaIds = authoredMedia.map(item => item.id);
+    const contentIds = [...new Set([...postIds, ...mediaIds])];
 
-    const commentsOnPosts = postIds.length
+    const commentsOnContent = contentIds.length
       ? await tx.select({ id: communityComments.id }).from(communityComments)
-          .where(inArray(communityComments.postId, postIds))
+          .where(inArray(communityComments.postId, contentIds))
       : [];
     const authoredComments = await tx.select({ id: communityComments.id }).from(communityComments)
       .where(eq(communityComments.authorId, id));
-    const commentIds = [...new Set([...commentsOnPosts, ...authoredComments].map(row => row.id))];
+    const commentIds = [...new Set([...commentsOnContent, ...authoredComments].map(row => row.id))];
 
-    if (postIds.length) {
-      await tx.delete(communityPostViews).where(inArray(communityPostViews.postId, postIds));
-    }
-    if (postIds.length || commentIds.length) {
-      const contentIds = [...new Set([...postIds, ...commentIds])];
-      await tx.delete(communityReactions).where(inArray(communityReactions.contentId, contentIds));
+    if (contentIds.length) {
+      await tx.delete(communityPostViews).where(inArray(communityPostViews.postId, contentIds));
       await tx.delete(communityReports).where(and(
         eq(communityReports.targetType, "post"),
-        inArray(communityReports.targetId, postIds.length ? postIds : ["__none__"]),
+        inArray(communityReports.targetId, contentIds),
       ));
-      if (commentIds.length) {
-        await tx.delete(communityReports).where(and(
-          eq(communityReports.targetType, "comment"),
-          inArray(communityReports.targetId, commentIds),
-        ));
-      }
+    }
+    if (contentIds.length || commentIds.length) {
+      const engagementIds = [...new Set([...contentIds, ...commentIds])];
+      await tx.delete(communityReactions).where(inArray(communityReactions.contentId, engagementIds));
+    }
+    if (commentIds.length) {
+      await tx.delete(communityReports).where(and(
+        eq(communityReports.targetType, "comment"),
+        inArray(communityReports.targetId, commentIds),
+      ));
     }
 
     await tx.delete(communityComments).where(or(
       eq(communityComments.authorId, id),
-      ...(postIds.length ? [inArray(communityComments.postId, postIds)] : []),
+      ...(contentIds.length ? [inArray(communityComments.postId, contentIds)] : []),
     ));
 
     if (postIds.length) {
       await tx.delete(communityPosts).where(inArray(communityPosts.id, postIds));
     }
+    await tx.delete(communityReports).where(and(
+      eq(communityReports.targetType, "artist"),
+      eq(communityReports.targetId, id),
+    ));
 
     const memberships = await tx.select({ conversationId: communityConversationMembers.conversationId })
       .from(communityConversationMembers).where(eq(communityConversationMembers.memberId, id));

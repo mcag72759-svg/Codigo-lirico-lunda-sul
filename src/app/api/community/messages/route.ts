@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { and, asc, desc, eq, inArray, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import {
@@ -86,7 +86,7 @@ async function getThread(conversationId: string, currentActorId: string, otherAc
     .leftJoin(artistApplications, eq(communityMessages.senderId, artistApplications.id))
     .leftJoin(platformAdmins, eq(communityMessages.senderId, platformAdmins.id))
     .where(eq(communityMessages.conversationId, conversationId))
-    .orderBy(asc(communityMessages.createdAt)).limit(200);
+    .orderBy(desc(communityMessages.createdAt), desc(communityMessages.id)).limit(200);
 
   await db.update(communityMessages).set({ readAt: new Date() })
     .where(and(
@@ -94,7 +94,7 @@ async function getThread(conversationId: string, currentActorId: string, otherAc
       eq(communityMessages.senderId, otherActorId),
       isNull(communityMessages.readAt),
     ));
-  return messages.map(item => ({ ...item, isMine: item.senderId === currentActorId }));
+  return messages.reverse().map(item => ({ ...item, isMine: item.senderId === currentActorId }));
 }
 
 export async function GET(request: Request) {

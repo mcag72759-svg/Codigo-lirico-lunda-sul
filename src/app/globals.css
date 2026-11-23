@@ -266,3 +266,20 @@ a{color:inherit;text-decoration:none}button,input,select,textarea{font:inherit}b
   .latest-social-actions .latest-share-button{flex:1 1 100%}
 }
 @media(prefers-reduced-motion:reduce){.latest-card{transition:none}.latest-card:hover{transform:none}}
+
+/* Páginas legais públicas */
+.legal-page{max-width:900px;padding-top:78px;padding-bottom:90px;color:var(--paper)}
+.legal-page h1{font-size:clamp(42px,7vw,72px);line-height:1.02;letter-spacing:-.055em;margin:18px 0 10px}
+.legal-page h1 em{color:var(--copper);font-style:normal}
+.legal-updated{color:#929b9e;font-size:11px;letter-spacing:.08em;text-transform:uppercase;margin:0 0 34px}
+.legal-page>p{max-width:78ch;color:#b8c0c2;font-size:14px;line-height:1.9;margin:0 0 18px}
+.legal-page h2{margin:38px 0 12px;font-size:20px;letter-spacing:-.025em;color:#ecefed}
+.legal-page ul{padding-left:22px;margin:0 0 18px;color:#b8c0c2;line-height:1.9}
+.legal-page li{padding:4px 0}
+.legal-page strong{color:#e7e9e7}
+.legal-nav{display:flex;gap:20px;flex-wrap:wrap;margin-top:44px;padding-top:22px;border-top:1px solid var(--line)}
+.legal-nav a,.footer-legal-links a{color:#d6b196;text-decoration:none;font-size:12px}
+.legal-nav a:hover,.footer-legal-links a:hover{text-decoration:underline}
+.footer-legal-links{display:flex;gap:18px;flex-wrap:wrap;justify-content:center;margin:18px auto 0}
+.legal-shell .site-footer{margin-top:0}
+@media(max-width:560px){.legal-page{padding-top:46px;padding-bottom:66px}.legal-page h2{margin-top:30px}.legal-nav{flex-direction:column;gap:12px}.footer-legal-links{justify-content:flex-start;margin:14px 0}}

@@ -1,13 +1,17 @@
 import { createHash, randomBytes, randomUUID, scryptSync } from "node:crypto";
-import { sql } from "drizzle-orm";
+import { and, count, eq, gt, lt, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { artistAccounts, artistApplications } from "@/lib/db/schema";
+import { artistAccounts, artistApplications, artistAuthAttempts } from "@/lib/db/schema";
 import { normalizePhone, phoneDigits } from "@/lib/phone";
 import { requestOriginIsSame } from "@/lib/security/admin-session";
+import { requestIpHash } from "@/lib/security/request-ip";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+const REGISTER_WINDOW_MS = 60 * 60 * 1000;
+const MAX_REGISTRATIONS_PER_HOUR = 10;
 
 function field(body: Record<string, unknown>, key: string, max: number): string {
   return typeof body[key] === "string" ? (body[key] as string).trim().slice(0, max) : "";
@@ -58,6 +62,22 @@ export async function POST(request: Request) {
   if (rawLink && !link) {
     return NextResponse.json({ error: "O portefólio deve usar uma ligação HTTPS válida." }, { status: 400 });
   }
+
+  const ipHash = requestIpHash(request);
+  const windowStart = new Date(Date.now() - REGISTER_WINDOW_MS);
+  const [recentAttempts] = await db.select({ total: count() })
+    .from(artistAuthAttempts)
+    .where(and(
+      eq(artistAuthAttempts.ipHash, ipHash),
+      eq(artistAuthAttempts.action, "register"),
+      gt(artistAuthAttempts.attemptedAt, windowStart),
+    ));
+  if (Number(recentAttempts?.total ?? 0) >= MAX_REGISTRATIONS_PER_HOUR) {
+    return NextResponse.json({ error: "Atingiste o limite temporário de cadastros neste acesso. Tenta novamente mais tarde." }, { status: 429 });
+  }
+  const attemptTime = new Date();
+  await db.insert(artistAuthAttempts).values({ ipHash, action: "register", attemptedAt: attemptTime });
+  await db.delete(artistAuthAttempts).where(lt(artistAuthAttempts.attemptedAt, new Date(attemptTime.getTime() - 24 * 60 * 60 * 1000)));
 
   const existing = await db.select({
     id: artistApplications.id,
