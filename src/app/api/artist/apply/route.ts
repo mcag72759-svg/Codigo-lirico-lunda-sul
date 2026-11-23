@@ -1,5 +1,5 @@
 import { createHash, randomBytes, randomUUID, scryptSync } from "node:crypto";
-import { and, count, gt, lt, sql } from "drizzle-orm";
+import { and, count, eq, gt, lt, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { artistAccounts, artistApplications, artistAuthAttempts } from "@/lib/db/schema";
