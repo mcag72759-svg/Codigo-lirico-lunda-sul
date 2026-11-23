@@ -1,12 +1,14 @@
 import { createHash, randomBytes, randomUUID, scryptSync, timingSafeEqual } from "node:crypto";
-import { and, eq } from "drizzle-orm";
+import { and, sql, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { artistAccounts, artistApplications, artistSessions } from "@/lib/db/schema";
+import { normalizePhone, phoneDigits } from "@/lib/phone";
 import { ARTIST_SESSION_COOKIE } from "@/lib/security/artist-session";
+import { requestOriginIsSame } from "@/lib/security/admin-session";
 
 export const runtime = "nodejs";
-const SESSION_SECONDS = 60 * 60 * 24 * 7;
+const SESSION_SECONDS = 60 * 60 * 24 * 30;
 
 function verifyPassword(password: string, salt: string, expectedHex: string): boolean {
   if (!/^[a-f0-9]{32}$/i.test(salt) || !/^[a-f0-9]{128}$/i.test(expectedHex)) return false;
@@ -16,6 +18,10 @@ function verifyPassword(password: string, salt: string, expectedHex: string): bo
 }
 
 export async function POST(request: Request) {
+  if (!requestOriginIsSame(request)) {
+    return NextResponse.json({ error: "Origem do pedido não permitida." }, { status: 403 });
+  }
+
   let body: unknown;
   try {
     body = await request.json();
@@ -24,10 +30,11 @@ export async function POST(request: Request) {
   }
 
   const input = body && typeof body === "object" ? body as Record<string, unknown> : {};
-  const email = typeof input.email === "string" ? input.email.trim().toLowerCase() : "";
+  const phone = typeof input.phone === "string" ? normalizePhone(input.phone.trim()) : "";
+  const digits = phoneDigits(phone);
   const password = typeof input.password === "string" ? input.password : "";
-  if (!email || email.length > 254 || password.length < 8 || password.length > 128) {
-    return NextResponse.json({ error: "E-mail ou palavra-passe incorrectos." }, { status: 401 });
+  if (!phone || password.length < 8 || password.length > 128) {
+    return NextResponse.json({ error: "Telefone ou palavra-passe incorrectos." }, { status: 401 });
   }
 
   const [record] = await db
@@ -35,6 +42,7 @@ export async function POST(request: Request) {
       accountId: artistAccounts.id,
       applicationId: artistApplications.id,
       stageName: artistApplications.stageName,
+      phone: artistApplications.phone,
       email: artistApplications.email,
       municipality: artistApplications.municipality,
       genre: artistApplications.genre,
@@ -45,11 +53,14 @@ export async function POST(request: Request) {
     })
     .from(artistAccounts)
     .innerJoin(artistApplications, eq(artistAccounts.applicationId, artistApplications.id))
-    .where(and(eq(artistApplications.email, email), eq(artistApplications.status, "approved")))
+    .where(and(
+      sql`regexp_replace(${artistApplications.phone}, '[^0-9]', '', 'g') = ${digits}`,
+      eq(artistApplications.status, "approved"),
+    ))
     .limit(1);
 
   if (!record || !verifyPassword(password, record.passwordSalt, record.passwordHash)) {
-    return NextResponse.json({ error: "E-mail ou palavra-passe incorrectos." }, { status: 401 });
+    return NextResponse.json({ error: "Telefone ou palavra-passe incorrectos. Confirma os dados ou verifica se a conta já foi aprovada." }, { status: 401 });
   }
 
   const token = randomBytes(32).toString("hex");
@@ -67,6 +78,7 @@ export async function POST(request: Request) {
     ok: true,
     artist: {
       stageName: record.stageName,
+      phone: record.phone,
       email: record.email,
       municipality: record.municipality,
       genre: record.genre,
