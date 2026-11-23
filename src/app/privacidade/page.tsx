@@ -42,7 +42,7 @@ export default function PrivacyPage() {
       <p>A aplicação utiliza serviços de alojamento e entrega da Vercel, armazenamento de ficheiros Vercel Blob e base de dados PostgreSQL fornecida pela Neon. Estes fornecedores processam dados necessários para alojar a plataforma, guardar registos e entregar ficheiros. A localização e os termos de tratamento dependem das configurações e condições desses fornecedores.</p>
 
       <h2>6. Conservação, cópias e eliminação</h2>
-      <p>Os dados de conta e conteúdo permanecem na base de dados enquanto a conta e os registos associados existirem, salvo remoção autorizada pela administração. As tentativas de autenticação usadas para controlo de abuso são limpas após 24 horas; sessões expiram e são removidas durante operações de autenticação.</p>
+      <p>Os dados de conta e conteúdo permanecem na base de dados enquanto a conta e os registos associados existirem, salvo remoção autorizada pela administração. As tentativas de autenticação antigas deixam de contar para os limites após a janela de controlo e são limpas durante operações posteriores de autenticação; não existe uma tarefa de limpeza em segundo plano. As sessões expiram e os registos expirados são removidos durante operações de autenticação.</p>
       <p><strong>Limite importante:</strong> o projecto Neon actualmente associado ao site está num plano que permite apenas 6 horas de recuperação temporal e não permite programar snapshots automáticos. Foi criado um snapshot manual antes das alterações técnicas recentes, mas isso não é uma garantia de conservação eterna nem substitui cópias independentes regulares. A plataforma não promete armazenamento permanente de todos os ficheiros ou dados.</p>
 
       <h2>7. Acesso, correcção ou remoção</h2>
