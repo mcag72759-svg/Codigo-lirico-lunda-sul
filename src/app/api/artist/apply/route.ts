@@ -63,7 +63,7 @@ export async function POST(request: Request) {
     id: artistApplications.id,
     status: artistApplications.status,
   }).from(artistApplications)
-    .where(sql`regexp_replace(${artistApplications.phone}, '[^0-9]', '', 'g') = ${digits}`)
+    .where(sql`(CASE WHEN length(regexp_replace(${artistApplications.phone}, '[^0-9]', '', 'g')) = 9 AND regexp_replace(${artistApplications.phone}, '[^0-9]', '', 'g') LIKE '9%' THEN '244' || regexp_replace(${artistApplications.phone}, '[^0-9]', '', 'g') ELSE regexp_replace(${artistApplications.phone}, '[^0-9]', '', 'g') END) = ${digits}`)
     .limit(1);
 
   if (existing.length) {
