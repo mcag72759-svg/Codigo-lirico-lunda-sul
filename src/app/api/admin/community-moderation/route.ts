@@ -97,17 +97,23 @@ export async function DELETE(request: Request) {
   const id = input && typeof input === "object" && typeof (input as Record<string, unknown>).id === "string"
     ? String((input as Record<string, unknown>).id).trim().slice(0, 80) : "";
   if (!id) return NextResponse.json({ error: "Identificador de publicação inválido." }, { status: 400 });
-  const [existing] = await db.select({id:communityPosts.id,title:communityPosts.title})
-    .from(communityPosts).where(eq(communityPosts.id,id)).limit(1);
-  if (!existing) return NextResponse.json({ error: "Publicação não encontrada." }, { status: 404 });
-  await Promise.all([
-    db.delete(communityPostViews).where(eq(communityPostViews.postId, id)),
-    db.delete(communityComments).where(eq(communityComments.postId, id)),
-    db.delete(communityReactions).where(eq(communityReactions.contentId, id)),
-    db.delete(communityReports).where(and(eq(communityReports.targetType, "post"), eq(communityReports.targetId, id))),
-  ]);
-  const [removed] = await db.delete(communityPosts).where(eq(communityPosts.id, id))
-    .returning({ id: communityPosts.id, title: communityPosts.title });
+  const removed = await db.transaction(async (tx) => {
+    const [existing] = await tx.select({ id: communityPosts.id, title: communityPosts.title })
+      .from(communityPosts).where(eq(communityPosts.id, id)).limit(1);
+    if (!existing) return null;
+    const comments = await tx.select({ id: communityComments.id })
+      .from(communityComments).where(eq(communityComments.postId, id));
+    const commentIds = comments.map(comment => comment.id);
+    await tx.delete(communityPostViews).where(eq(communityPostViews.postId, id));
+    await tx.delete(communityComments).where(eq(communityComments.postId, id));
+    await tx.delete(communityReactions).where(eq(communityReactions.contentId, id));
+    await tx.delete(communityReports).where(or(
+      and(eq(communityReports.targetType, "post"), eq(communityReports.targetId, id)),
+      ...(commentIds.length ? [and(eq(communityReports.targetType, "comment"), inArray(communityReports.targetId, commentIds))] : []),
+    ));
+    await tx.delete(communityPosts).where(eq(communityPosts.id, id));
+    return existing;
+  });
   if (!removed) return NextResponse.json({ error: "Publicação não encontrada." }, { status: 404 });
   await db.insert(platformAuditLog).values({
     actorAdminId: admin.id, action: "community.post.delete", entityType: "community_posts",
