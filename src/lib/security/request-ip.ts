@@ -1,8 +1,9 @@
-import { createHash } from "node:crypto";
+import { createHmac } from "node:crypto";
 
-/** Returns a stable, non-reversible hash of the request IP for rate limiting. */
+/** Creates a keyed, non-plaintext identifier for request rate limiting. */
 export function requestIpHash(request: Request): string {
   const forwarded = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
   const ip = request.headers.get("x-real-ip")?.trim() || forwarded || "unknown";
-  return createHash("sha256").update(ip).digest("hex");
+  const key = process.env.IP_HASH_SECRET || process.env.DATABASE_URL || "codigo-lirico-test-only";
+  return createHmac("sha256", key).update(ip).digest("hex");
 }
