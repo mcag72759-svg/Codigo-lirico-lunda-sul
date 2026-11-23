@@ -3,7 +3,7 @@ import "server-only";
 import { and, eq, or } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
-  artistMedia, communityBlocks, communityFollows, communityPosts, platformPublications, publishedContent,
+  artistApplications, artistMedia, communityBlocks, communityFollows, communityPosts, platformPublications, publishedContent,
 } from "@/lib/db/schema";
 
 type ReadablePost = {
@@ -70,11 +70,14 @@ export async function canReadCommunityPost(postId: string, viewerId?: string): P
   const [media] = await db.select({
     id: artistMedia.id,
     authorId: artistMedia.applicationId,
-  }).from(artistMedia).where(and(
-    eq(artistMedia.id, postId),
-    eq(artistMedia.status, "approved"),
-    eq(artistMedia.downloadAllowed, true),
-  )).limit(1);
+  }).from(artistMedia)
+    .innerJoin(artistApplications, eq(artistMedia.applicationId, artistApplications.id))
+    .where(and(
+      eq(artistMedia.id, postId),
+      eq(artistMedia.status, "approved"),
+      eq(artistMedia.downloadAllowed, true),
+      eq(artistApplications.status, "approved"),
+    )).limit(1);
   if (media) {
     if (viewerId && await hasCommunityBlock(viewerId, media.authorId)) return null;
     return { id: media.id, authorId: media.authorId, visibility: "public", status: "approved", scheduledAt: null };
