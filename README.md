@@ -12,10 +12,12 @@ Plataforma cultural independente criada por MC AG EIGI, com foco em artistas, m�
 - Contas e perfis guardados em Neon PostgreSQL; palavras-passe protegidas com scrypt e salt individual, sessões guardadas por hash e recuperação com código de utilização única.
 - Estúdio privado do artista: envio de áudio/vídeo, lista de envios e cancelamento de ficheiros pendentes.
 - Moderação administrativa de ficheiros de artistas; apenas material aprovado e autorizado aparece no feed público.
-- Comunidade de artistas aprovados em `/comunidade`: feed público e para seguidores, comentários, reacções, seguir criadores, denúncias e moderação administrativa de publicações pendentes.
+- Comunidade de artistas aprovados em `/comunidade`: feed público e para seguidores, comentários em conteúdos públicos da comunidade e da biblioteca, reacções, seguir criadores, denúncias e moderação administrativa.
+- Comentários validados no servidor: apenas artistas aprovados e administradores activos podem comentar; conteúdos pendentes, rejeitados, agendados para o futuro ou de artistas suspensos ficam protegidos.
 - Secções públicas com perfis de artistas aprovados, eventos e oportunidades lidos da base Neon.
 - Base de dados Neon PostgreSQL e acesso pelo Drizzle ORM, exclusivamente no servidor.
-- Registos administrativos de auditoria e limitação de tentativas de login.
+- Registos administrativos de auditoria e limitação de tentativas de login/cadastro por endereço de origem, guardado apenas como hash.
+- Cabeçalhos HTTP de protecção contra MIME sniffing, clickjacking e permissões de navegador desnecessárias.
 
 ## Endereços
 - Página principal: `/`
@@ -65,3 +67,7 @@ npm audit --audit-level=high
 A bilheteira encaminha para um serviço externo; não processa pagamentos no próprio Código Lírico. O agendamento não substitui a revisão administrativa: uma publicação só fica visível depois de aprovada e de chegar a hora definida.
 
 Os links das redes sociais do criador usam pesquisas públicas enquanto os URLs directos dos perfis não forem configurados. A lista de eventos e oportunidades depende de registos mantidos na base de dados; cada entidade externa deve ser confirmada na sua fonte antes de qualquer participação.
+
+## Continuidade e cópias de segurança
+
+Foi criado um snapshot manual da base de dados antes das últimas alterações de diagnóstico. O projecto Neon associado está no plano gratuito: a recuperação temporal está limitada a 6 horas e a criação de cópias automáticas agendadas não está habilitada neste projecto. Isto não equivale a armazenamento eterno. Para retenção longa, é necessário activar um plano/serviço com backups agendados ou exportar regularmente uma cópia PostgreSQL para armazenamento independente.
