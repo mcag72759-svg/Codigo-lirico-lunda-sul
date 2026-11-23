@@ -1,7 +1,7 @@
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq, inArray, or } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { artistApplications, artistMedia, platformAuditLog } from "@/lib/db/schema";
+import { artistApplications, artistMedia, communityComments, communityPostViews, communityReactions, communityReports, platformAuditLog } from "@/lib/db/schema";
 import { getAdminSession, requestOriginIsSame } from "@/lib/security/admin-session";
 import { hasAnyPermission } from "@/lib/security/permissions";
 
@@ -78,12 +78,30 @@ export async function DELETE(request: Request) {
   const id = input && typeof input === "object" && typeof (input as Record<string, unknown>).id === "string"
     ? String((input as Record<string, unknown>).id).trim().slice(0, 80) : "";
   if (!id) return NextResponse.json({ error: "Identificador de ficheiro inválido." }, { status: 400 });
-  const [removed] = await db.delete(artistMedia).where(eq(artistMedia.id, id))
-    .returning({ id: artistMedia.id, title: artistMedia.title });
+
+  const removed = await db.transaction(async (tx) => {
+    const [existing] = await tx.select({ id: artistMedia.id, title: artistMedia.title })
+      .from(artistMedia).where(eq(artistMedia.id, id)).limit(1);
+    if (!existing) return null;
+    const comments = await tx.select({ id: communityComments.id })
+      .from(communityComments).where(eq(communityComments.postId, id));
+    const commentIds = comments.map(comment => comment.id);
+    await tx.delete(communityComments).where(eq(communityComments.postId, id));
+    await tx.delete(communityPostViews).where(eq(communityPostViews.postId, id));
+    await tx.delete(communityReactions).where(eq(communityReactions.contentId, id));
+    await tx.delete(communityReports).where(or(
+      and(eq(communityReports.targetType, "post"), eq(communityReports.targetId, id)),
+      ...(commentIds.length ? [and(eq(communityReports.targetType, "comment"), inArray(communityReports.targetId, commentIds))] : []),
+    ));
+    await tx.delete(artistMedia).where(eq(artistMedia.id, id));
+    return existing;
+  });
   if (!removed) return NextResponse.json({ error: "Ficheiro não encontrado." }, { status: 404 });
   await db.insert(platformAuditLog).values({
     actorAdminId: admin.id, action: "artist_media.delete", entityType: "artist_media",
     entityId: id, details: { title: removed.title }, createdAt: new Date(),
   });
+  revalidatePath("/");
+  revalidatePath("/downloads");
   return NextResponse.json({ ok: true });
 }
