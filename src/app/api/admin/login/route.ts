@@ -1,5 +1,5 @@
 import { createHash, randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
-import { and, count, eq, gt } from "drizzle-orm";
+import { and, count, eq, gt, lte } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import {
@@ -98,6 +98,9 @@ export async function POST(request: Request) {
   }
 
   await db.delete(platformAdminLoginAttempts).where(eq(platformAdminLoginAttempts.ipHash, ipHash));
+  const sessionNow = new Date();
+  await db.delete(platformAdminSessions).where(lte(platformAdminSessions.expiresAt, sessionNow));
+  await db.delete(platformAdminLoginAttempts).where(lte(platformAdminLoginAttempts.attemptedAt, new Date(sessionNow.getTime() - 24 * 60 * 60 * 1000)));
 
   const token = randomBytes(32).toString("hex");
   const tokenHash = createHash("sha256").update(token).digest("hex");
