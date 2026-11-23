@@ -84,6 +84,7 @@ export async function POST(request: Request) {
     eq(artistAuthAttempts.ipHash, ipHash),
     eq(artistAuthAttempts.action, "login"),
   ));
+  await db.delete(artistAuthAttempts).where(lte(artistAuthAttempts.attemptedAt, new Date(now.getTime() - 24 * 60 * 60 * 1000)));
   await db.delete(artistSessions).where(lte(artistSessions.expiresAt, now));
   const token = randomBytes(32).toString("hex");
   const tokenHash = createHash("sha256").update(token).digest("hex");
