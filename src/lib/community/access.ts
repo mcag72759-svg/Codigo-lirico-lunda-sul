@@ -28,13 +28,16 @@ export async function canReadCommunityPost(postId: string, viewerId?: string): P
   const [post] = await db.select({
     id: communityPosts.id,
     authorId: communityPosts.authorId,
+    authorStatus: artistApplications.status,
     visibility: communityPosts.visibility,
     status: communityPosts.status,
     scheduledAt: communityPosts.scheduledAt,
-  }).from(communityPosts).where(eq(communityPosts.id, postId)).limit(1);
+  }).from(communityPosts)
+    .innerJoin(artistApplications, eq(communityPosts.authorId, artistApplications.id))
+    .where(eq(communityPosts.id, postId)).limit(1);
 
   if (post) {
-    if (post.status !== "approved") return null;
+    if (post.status !== "approved" || post.authorStatus !== "approved") return null;
     if (viewerId && post.authorId === viewerId) return post;
     if (post.scheduledAt && post.scheduledAt.getTime() > Date.now()) return null;
     if (viewerId && await hasCommunityBlock(viewerId, post.authorId)) return null;
