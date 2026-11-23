@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
   bigserial,
   bigint,
@@ -35,7 +36,11 @@ export const artistApplications = pgTable("artist_applications", {
   decisionNote: text("decision_note").notNull(),
   reviewedBy: text("reviewed_by"),
   updatedAt: timestamptz("updated_at").notNull(),
-});
+}, (table) => ({
+  phoneDigitsUnique: uniqueIndex("artist_applications_phone_digits_unique")
+    .on(sql`regexp_replace(${table.phone}, '[^0-9]', '', 'g')`)
+    .where(sql`btrim(${table.phone}) <> ''`),
+}));
 
 export const artistAccounts = pgTable("artist_accounts", {
   id: text("id").primaryKey(),
