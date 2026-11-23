@@ -34,7 +34,7 @@ BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM public.community_posts
     WHERE id = NEW.post_id AND status = 'approved'
-      AND (scheduled_at IS NULL OR scheduled_at <= now())
+      AND (scheduled_at IS NULL OR scheduled_at <= now() OR author_id = NEW.author_id)
   ) AND NOT EXISTS (
     SELECT 1 FROM public.published_content WHERE id = NEW.post_id
   ) AND NOT EXISTS (
