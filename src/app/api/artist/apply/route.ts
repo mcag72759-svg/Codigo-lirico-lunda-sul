@@ -52,7 +52,7 @@ export async function POST(request: Request) {
   if (password.length < 8 || password.length > 128) {
     return NextResponse.json({ error: "A palavra-passe deve ter entre 8 e 128 caracteres." }, { status: 400 });
   }
-  if (email && !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)) {
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return NextResponse.json({ error: "O e-mail opcional não parece válido. Corrige-o ou deixa o campo vazio." }, { status: 400 });
   }
   if (rawLink && !link) {
