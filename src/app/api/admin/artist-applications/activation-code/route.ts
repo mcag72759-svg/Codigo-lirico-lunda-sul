@@ -35,7 +35,7 @@ export async function POST(request: Request) {
     const [current] = await tx.select({
       id: artistApplications.id,
       stageName: artistApplications.stageName,
-      email: artistApplications.email,
+      phone: artistApplications.phone,
     }).from(artistApplications)
       .where(and(
         eq(artistApplications.id, id),
@@ -68,7 +68,7 @@ export async function POST(request: Request) {
 
   return NextResponse.json({
     ok: true,
-    email: application.email,
+    phone: application.phone,
     stageName: application.stageName,
     activationCode,
   });
