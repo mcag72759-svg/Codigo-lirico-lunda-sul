@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
   bigserial,
   bigint,
@@ -35,7 +36,11 @@ export const artistApplications = pgTable("artist_applications", {
   decisionNote: text("decision_note").notNull(),
   reviewedBy: text("reviewed_by"),
   updatedAt: timestamptz("updated_at").notNull(),
-});
+}, (table) => ({
+  phoneDigitsUnique: uniqueIndex("artist_applications_phone_digits_unique")
+    .on(sql`(CASE WHEN length(regexp_replace(${table.phone}, '[^0-9]', '', 'g')) = 9 AND regexp_replace(${table.phone}, '[^0-9]', '', 'g') LIKE '9%' THEN '244' || regexp_replace(${table.phone}, '[^0-9]', '', 'g') ELSE regexp_replace(${table.phone}, '[^0-9]', '', 'g') END)`)
+    .where(sql`btrim(${table.phone}) <> ''`),
+}));
 
 export const artistAccounts = pgTable("artist_accounts", {
   id: text("id").primaryKey(),

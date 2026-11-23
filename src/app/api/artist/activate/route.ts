@@ -1,14 +1,15 @@
 import { createHash, randomBytes, randomUUID, scryptSync } from "node:crypto";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { artistAccounts, artistApplications, artistSessions } from "@/lib/db/schema";
+import { normalizePhone, phoneDigits } from "@/lib/phone";
 import { ARTIST_SESSION_COOKIE } from "@/lib/security/artist-session";
 import { requestOriginIsSame } from "@/lib/security/admin-session";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-const SESSION_SECONDS = 60 * 60 * 24 * 7;
+const SESSION_SECONDS = 60 * 60 * 24 * 30;
 
 export async function POST(request: Request) {
   if (!requestOriginIsSame(request)) {
@@ -17,18 +18,18 @@ export async function POST(request: Request) {
 
   let input: unknown;
   try { input = await request.json(); }
-  catch { return NextResponse.json({ error: "Preenche o e-mail, o código e a palavra-passe." }, { status: 400 }); }
+  catch { return NextResponse.json({ error: "Preenche o telefone, o código e a nova palavra-passe." }, { status: 400 }); }
 
   const body = input && typeof input === "object" ? input as Record<string, unknown> : {};
-  const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
+  const phone = typeof body.phone === "string" ? normalizePhone(body.phone.trim()) : "";
+  const digits = phoneDigits(phone);
   const activationCode = typeof body.activationCode === "string" ? body.activationCode.trim().toLowerCase() : "";
   const password = typeof body.password === "string" ? body.password : "";
 
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ||
-      !/^[a-f0-9]{48}$/.test(activationCode) ||
+  if (!phone || !/^[a-f0-9]{48}$/.test(activationCode) ||
       password.length < 8 || password.length > 128) {
     return NextResponse.json({
-      error: "Confirma o e-mail, o código de activação e uma palavra-passe com 8 a 128 caracteres.",
+      error: "Confirma o número de telefone, o código de acesso e uma palavra-passe com 8 a 128 caracteres.",
     }, { status: 400 });
   }
 
@@ -37,23 +38,27 @@ export async function POST(request: Request) {
     id: artistApplications.id,
     status: artistApplications.status,
     stageName: artistApplications.stageName,
+    phone: artistApplications.phone,
     email: artistApplications.email,
     municipality: artistApplications.municipality,
     genre: artistApplications.genre,
     bio: artistApplications.bio,
     photoUrl: artistApplications.photoUrl,
   }).from(artistApplications)
-    .where(and(eq(artistApplications.email, email), eq(artistApplications.code, codeHash)))
+    .where(and(
+      sql`(CASE WHEN length(regexp_replace(${artistApplications.phone}, '[^0-9]', '', 'g')) = 9 AND regexp_replace(${artistApplications.phone}, '[^0-9]', '', 'g') LIKE '9%' THEN '244' || regexp_replace(${artistApplications.phone}, '[^0-9]', '', 'g') ELSE regexp_replace(${artistApplications.phone}, '[^0-9]', '', 'g') END) = ${digits}`,
+      eq(artistApplications.code, codeHash),
+    ))
     .limit(1);
 
   if (!application) {
-    return NextResponse.json({ error: "O e-mail ou o código de activação não corresponde a um código válido." }, { status: 400 });
+    return NextResponse.json({ error: "O telefone ou o código não corresponde a um código válido." }, { status: 400 });
   }
   if (application.status === "pending") {
     return NextResponse.json({ error: "A tua candidatura ainda aguarda aprovação. Depois da aprovação, volta aqui para criares a palavra-passe." }, { status: 409 });
   }
   if (application.status !== "approved") {
-    return NextResponse.json({ error: "Esta candidatura não foi aprovada. Contacta a equipa da plataforma." }, { status: 403 });
+    return NextResponse.json({ error: "Esta conta não está aprovada. Contacta a equipa da plataforma." }, { status: 403 });
   }
 
   const passwordSalt = randomBytes(16).toString("hex");
@@ -125,6 +130,7 @@ export async function POST(request: Request) {
     ok: true,
     artist: {
       stageName: application.stageName,
+      phone: application.phone,
       email: application.email,
       municipality: application.municipality,
       genre: application.genre,

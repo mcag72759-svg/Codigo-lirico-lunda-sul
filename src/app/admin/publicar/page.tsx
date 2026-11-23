@@ -38,7 +38,7 @@ export default function AdminPublishPage() {
   const [items,setItems]=useState<Publication[]>([]);
   const [artistMediaItems,setArtistMediaItems]=useState<ArtistMedia[]>([]);
   const [artistApplications,setArtistApplications]=useState<ArtistApplication[]>([]);
-  const [activationCredential,setActivationCredential]=useState<{applicationId:string;stageName:string;email:string;code:string}|null>(null);
+  const [activationCredential,setActivationCredential]=useState<{applicationId:string;stageName:string;phone:string;code:string}|null>(null);
   const [administrators,setAdministrators]=useState<AdminRecord[]>([]);
   const [newAdminName,setNewAdminName]=useState("");
   const [newAdminEmail,setNewAdminEmail]=useState("");
@@ -203,7 +203,7 @@ export default function AdminPublishPage() {
     try{
       const r=await fetch("/api/admin/artist-applications/activation-code",{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:item.id})});
       const j=await r.json();if(!r.ok)throw new Error(j.error??"Não foi possível emitir o código.");
-      setActivationCredential({applicationId:item.id,stageName:j.stageName,email:j.email,code:j.activationCode});
+      setActivationCredential({applicationId:item.id,stageName:j.stageName,phone:j.phone,code:j.activationCode});
       setMessage("Código emitido. Entrega-o directamente ao artista; só pode ser utilizado uma vez.");
     }catch(e){setMessage(e instanceof Error?e.message:"Erro ao emitir código de acesso.");}
     finally{setBusy(false);}
@@ -331,7 +331,7 @@ export default function AdminPublishPage() {
             <span>{applicationStatusLabels[item.status]??item.status} · {new Date(item.createdAt).toLocaleDateString("pt-AO")}</span>
             <h3>{item.stageName}</h3>
             <p>{item.fullName} · {item.municipality} · {item.genre}</p>
-            <p>{item.email} · {item.phone}</p>
+            <p>{item.email ? item.email+" · " : ""}{item.phone}</p>
             <p>{item.bio}</p>
             {item.link&&<a className="download-link" href={item.link} target="_blank" rel="noreferrer">Ver portefólio ↗</a>}
           </div>
@@ -351,7 +351,7 @@ export default function AdminPublishPage() {
             {(admin.permissions.includes("*")||admin.permissions.includes("artists.manage"))&&
               <button className="admin-delete" type="button" onClick={()=>removeArtistApplication(item)} disabled={busy}>Apagar definitivamente</button>}
           </div>
-          {activationCredential?.applicationId===item.id&&<div className="admin-created-secret"><strong>Código privado · {activationCredential.stageName}</strong><p>{activationCredential.email}</p><code>{activationCredential.code}</code><button className="admin-edit" type="button" onClick={copyActivationCode}>Copiar código</button><p>Entrega este código ao artista. Ele deve abrir o estúdio, ir a “Activar / actualizar acesso” e criar uma nova palavra-passe. O código deixa de funcionar depois da utilização.</p></div>}
+          {activationCredential?.applicationId===item.id&&<div className="admin-created-secret"><strong>Código privado · {activationCredential.stageName}</strong><p>{activationCredential.phone}</p><code>{activationCredential.code}</code><button className="admin-edit" type="button" onClick={copyActivationCode}>Copiar código</button><p>Entrega este código ao artista. Ele deve abrir o estúdio, ir a “Activar / actualizar acesso” e criar uma nova palavra-passe. O código deixa de funcionar depois da utilização.</p></div>}
         </article>)}
         <p className="admin-security-note">Usa as acções de cada registo: aprovar/rejeitar candidaturas, suspender/reactivar contas e, com permissão de gestão, apagar definitivamente uma conta e os dados associados. A emissão de códigos permite activar contas antigas ou recuperar o acesso.</p>
       </section>}

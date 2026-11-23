@@ -1,8 +1,9 @@
 import { createHash, randomBytes, randomUUID, scryptSync } from "node:crypto";
-import { desc, eq } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { artistAccounts, artistApplications } from "@/lib/db/schema";
+import { normalizePhone, phoneDigits } from "@/lib/phone";
 import { requestOriginIsSame } from "@/lib/security/admin-session";
 
 export const runtime = "nodejs";
@@ -11,10 +12,15 @@ export const dynamic = "force-dynamic";
 function field(body: Record<string, unknown>, key: string, max: number): string {
   return typeof body[key] === "string" ? (body[key] as string).trim().slice(0, max) : "";
 }
+
 function safeHttpsUrl(value: string): string {
   if (!value) return "";
   try { const url = new URL(value); return url.protocol === "https:" ? url.toString() : ""; }
   catch { return ""; }
+}
+
+function isUniqueViolation(error: unknown): boolean {
+  return Boolean(error && typeof error === "object" && "code" in error && error.code === "23505");
 }
 
 export async function POST(request: Request) {
@@ -24,49 +30,52 @@ export async function POST(request: Request) {
 
   let input: unknown;
   try { input = await request.json(); }
-  catch { return NextResponse.json({ error: "Preenche os dados da candidatura." }, { status: 400 }); }
+  catch { return NextResponse.json({ error: "Preenche o número de telefone e a palavra-passe." }, { status: 400 }); }
 
   const body = input && typeof input === "object" ? input as Record<string, unknown> : {};
-  const stageName = field(body, "stageName", 100);
+  const phone = normalizePhone(field(body, "phone", 40));
+  const digits = phoneDigits(phone);
+  const password = typeof body.password === "string" ? body.password : "";
+
+  const stageName = field(body, "stageName", 100) || "Artista " + digits.slice(-4);
   const fullName = field(body, "fullName", 140);
   const municipality = field(body, "municipality", 100);
   const genre = field(body, "genre", 80);
   const email = field(body, "email", 254).toLowerCase();
-  const phone = field(body, "phone", 40);
   const bio = field(body, "bio", 1800);
   const rawLink = field(body, "link", 2048);
   const link = safeHttpsUrl(rawLink);
-  const password = typeof body.password === "string" ? body.password : "";
-  const confirmPassword = typeof body.confirmPassword === "string" ? body.confirmPassword : "";
 
-  if (!stageName || !fullName || !municipality || !genre || !phone || bio.length < 20 ||
-      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || (rawLink && !link)) {
-    return NextResponse.json({
-      error: "Confirma o nome artístico, nome completo, município, género, e-mail, telefone e uma apresentação com pelo menos 20 caracteres. O portefólio deve usar HTTPS.",
-    }, { status: 400 });
+  if (!phone) {
+    return NextResponse.json({ error: "Indica um número de telefone válido, incluindo o indicativo do país quando necessário." }, { status: 400 });
   }
-  if (password.length < 8 || password.length > 128 || password !== confirmPassword) {
-    return NextResponse.json({
-      error: password !== confirmPassword
-        ? "As palavras-passe não coincidem."
-        : "A palavra-passe deve ter entre 8 e 128 caracteres.",
-    }, { status: 400 });
+  if (password.length < 8 || password.length > 128) {
+    return NextResponse.json({ error: "A palavra-passe deve ter entre 8 e 128 caracteres." }, { status: 400 });
+  }
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return NextResponse.json({ error: "O e-mail opcional não parece válido. Corrige-o ou deixa o campo vazio." }, { status: 400 });
+  }
+  if (rawLink && !link) {
+    return NextResponse.json({ error: "O portefólio deve usar uma ligação HTTPS válida." }, { status: 400 });
   }
 
-  const [existing] = await db.select({
+  const existing = await db.select({
     id: artistApplications.id,
     status: artistApplications.status,
   }).from(artistApplications)
-    .where(eq(artistApplications.email, email))
-    .orderBy(desc(artistApplications.createdAt))
+    .where(sql`(CASE WHEN length(regexp_replace(${artistApplications.phone}, '[^0-9]', '', 'g')) = 9 AND regexp_replace(${artistApplications.phone}, '[^0-9]', '', 'g') LIKE '9%' THEN '244' || regexp_replace(${artistApplications.phone}, '[^0-9]', '', 'g') ELSE regexp_replace(${artistApplications.phone}, '[^0-9]', '', 'g') END) = ${digits}`)
     .limit(1);
 
-  if (existing && existing.status !== "rejected") {
-    return NextResponse.json({
-      error: existing.status === "approved"
-        ? "Já existe uma candidatura aprovada com este e-mail. Entra no estúdio ou pede à administração um código de recuperação."
-        : "Já existe uma candidatura pendente com este e-mail. Aguarda a revisão da equipa.",
-    }, { status: 409 });
+  if (existing.length) {
+    const status = existing[0].status;
+    const message = status === "approved"
+      ? "Já existe uma conta com este número. Entra no estúdio com o teu telefone e a palavra-passe."
+      : status === "suspended"
+        ? "Esta conta está suspensa. Contacta a administração para recuperar o acesso."
+        : status === "rejected"
+          ? "Já existe uma candidatura associada a este número. Contacta a equipa para reabrir a candidatura."
+          : "Já existe uma candidatura com este número e continua pendente. Aguarda a revisão da equipa.";
+    return NextResponse.json({ error: message }, { status: 409 });
   }
 
   const applicationId = randomUUID();
@@ -74,7 +83,6 @@ export async function POST(request: Request) {
   const now = new Date();
   const passwordSalt = randomBytes(16).toString("hex");
   const passwordHash = scryptSync(password, passwordSalt, 64).toString("hex");
-  // The schema retains a private one-time code for older applications; new accounts use the password chosen here.
   const unusedActivationCodeHash = createHash("sha256").update(randomBytes(24)).digest("hex");
 
   try {
@@ -94,7 +102,7 @@ export async function POST(request: Request) {
         status: "pending",
         createdAt: now,
         reviewedAt: null,
-        requirements: "Candidatura submetida através do formulário público de artistas.",
+        requirements: "Cadastro criado com telefone e palavra-passe. Os restantes dados do perfil são opcionais.",
         deadline: null,
         decisionNote: "",
         reviewedBy: null,
@@ -110,15 +118,18 @@ export async function POST(request: Request) {
         updatedAt: now,
       });
     });
-  } catch {
+  } catch (error) {
+    if (isUniqueViolation(error)) {
+      return NextResponse.json({ error: "Este número já está associado a uma conta ou candidatura." }, { status: 409 });
+    }
     return NextResponse.json({
-      error: "Não foi possível guardar a candidatura e a conta. Confirma os dados e tenta novamente.",
+      error: "Não foi possível guardar o cadastro. Os dados não foram apagados; tenta novamente.",
     }, { status: 500 });
   }
 
   return NextResponse.json({
     ok: true,
-    email,
-    message: "Candidatura recebida. O e-mail e a palavra-passe foram guardados com segurança. Depois da aprovação, poderás entrar no estúdio com estes mesmos dados.",
+    phone,
+    message: "Cadastro guardado. A conta fica pendente até à aprovação da administração. Depois, entra com este número e a mesma palavra-passe.",
   }, { status: 201 });
 }

@@ -20,6 +20,7 @@ export async function getArtistSession() {
       applicationId: artistApplications.id,
       stageName: artistApplications.stageName,
       email: artistApplications.email,
+      phone: artistApplications.phone,
       municipality: artistApplications.municipality,
       genre: artistApplications.genre,
       bio: artistApplications.bio,

@@ -7,7 +7,10 @@ Plataforma cultural independente criada por MC AG EIGI, com foco em artistas, m�
 - Área administrativa com sessão protegida, permissões, auditoria, publicação, edição e remoção de conteúdos.
 - Upload directo de ficheiros do telemóvel ou computador para Vercel Blob (até 200 MB por ficheiro, conforme os tipos aceites no formulário).
 - Biblioteca pública de downloads para ficheiros publicados.
-- Estúdio privado do artista em `/artista`: autenticação para contas aprovadas, envio de áudio/vídeo, lista de envios e cancelamento de ficheiros pendentes.
+- Registo de artistas com apenas telefone e palavra-passe obrigatórios; os dados adicionais do perfil são opcionais e podem ser preenchidos no cadastro.
+- Login do estúdio em `/artista` através de telefone e palavra-passe, com suporte a números angolanos nacionais e internacionais.
+- Contas e perfis guardados em Neon PostgreSQL; palavras-passe protegidas com scrypt e salt individual, sessões guardadas por hash e recuperação com código de utilização única.
+- Estúdio privado do artista: envio de áudio/vídeo, lista de envios e cancelamento de ficheiros pendentes.
 - Moderação administrativa de ficheiros de artistas; apenas material aprovado e autorizado aparece no feed público.
 - Comunidade de artistas aprovados em `/comunidade`: feed público e para seguidores, comentários, reacções, seguir criadores, denúncias e moderação administrativa de publicações pendentes.
 - Secções públicas com perfis de artistas aprovados, eventos e oportunidades lidos da base Neon.
@@ -28,7 +31,8 @@ Plataforma cultural independente criada por MC AG EIGI, com foco em artistas, m�
 - As operações de administração verificam a sessão e a permissão no servidor.
 - O envio de ficheiros é autorizado por sessão e utiliza tokens temporários de upload do Blob.
 - A palavra-passe administrativa e a ligação à base de dados são segredos de ambiente da Vercel. Nunca as colocar no Git.
-- Conteúdos enviados pelo artista ficam pendentes até revisão administrativa.
+- Conteúdos enviados pelo artista ficam pendentes até revisão administrativa; o feed público só mostra conteúdo aprovado.
+- Um índice único na base de dados impede que o mesmo telefone seja registado novamente com pontuação ou indicativo diferente.
 - Links externos só são aceites quando usam HTTPS.
 
 ## Desenvolvimento

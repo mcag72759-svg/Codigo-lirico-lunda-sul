@@ -14,6 +14,7 @@ export async function GET() {
   return NextResponse.json({ authenticated: true, artist: {
     stageName: artist.stageName,
     email: artist.email,
+    phone: artist.phone,
     municipality: artist.municipality,
     genre: artist.genre,
     bio: artist.bio,
