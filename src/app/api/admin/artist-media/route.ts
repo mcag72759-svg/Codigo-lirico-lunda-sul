@@ -1,5 +1,6 @@
 import { and, desc, eq, inArray, or } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { artistApplications, artistMedia, communityComments, communityPostViews, communityReactions, communityReports, platformAuditLog } from "@/lib/db/schema";
 import { getAdminSession, requestOriginIsSame } from "@/lib/security/admin-session";
